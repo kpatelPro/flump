@@ -153,6 +153,7 @@ public class PreviewController
     }
 
     protected function showInternal () :void {
+    try {
         // we dispose this at the end of the function
         var oldCreator :DisplayCreator = _creator;
 
@@ -214,7 +215,10 @@ public class PreviewController
         if (_atlasPreviewWindow != null && !_atlasPreviewWindow.closed) {
             updateAtlas();
         }
-
+    } catch (e :Error) {
+        ErrorWindowMgr.showErrorPopup("Preview Failed", e.message, _animPreviewWindow);
+    }
+    
         if (oldCreator != null) {
             oldCreator.dispose();
         }
