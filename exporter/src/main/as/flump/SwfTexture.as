@@ -46,6 +46,7 @@ public class SwfTexture
         const instance :Object = new klass();
         const disp :DisplayObject = (instance is BitmapData) ?
             new Bitmap(BitmapData(instance)) : DisplayObject(instance);
+        disp.filters = disp.filters.concat(tex.filters);
         return new SwfTexture(tex.symbol, disp, scale, quality);
     }
 
