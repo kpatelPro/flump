@@ -45,6 +45,7 @@ public class XflLibrary
 
     public var frameRate :Number;
     public var backgroundColor :int;
+    public var libraryScale :Number = 1;
 
     // The MD5 of the published library SWF
     public var md5 :String;
@@ -86,6 +87,8 @@ public class XflLibrary
                 if (xml != null) parseMovie(xml);
             }
         }
+
+        parseLibraryScale();
 
         for each (movie in movies) if (isExported(movie)) prepareForPublishing(movie);
     }
@@ -131,6 +134,33 @@ public class XflLibrary
                 }
             }
         }
+    }
+
+    // Use the scale from library:scale:[0]:[0] to specify a global scale factor over the this library
+    private function parseLibraryScale():void {
+        const specialScaleSymbolId:String = 'scale';
+
+        // look for keyframe 0 or layer 0 of movie symbol with special name 'scale'
+        if (!hasItem(specialScaleSymbolId, MovieMold)) return;
+        var movie:MovieMold = getItem(specialScaleSymbolId, MovieMold);
+        if (movie.layers.length == 0) {
+            addError(location + ":" + movie.id, ParseError.WARN, 'scale symbol must have a layer');
+            return;
+        }
+        var layer:LayerMold = movie.layers[0];
+        if (layer.keyframes.length == 0) {
+            addError(location + ":" + movie.id, ParseError.WARN, 'scale symbol must have a keyframe');
+            return;
+        }
+        var keyframe:KeyframeMold = layer.keyframes[0];
+        if (Math.abs(keyframe.scaleX - keyframe.scaleY) >= 0.01) {
+            addError(location + ":" + movie.id, ParseError.WARN, 'scale symbol must specify uniform scale, skipping');
+            return;
+        }
+        // get the scale
+        this.libraryScale = Math.min(keyframe.scaleX, keyframe.scaleY);
+        // make sure we don't export this symbol 
+        removeFromExport(movie);
     }
 
     public function createId (item :Object, libraryName :String, symbol :String) :String {
