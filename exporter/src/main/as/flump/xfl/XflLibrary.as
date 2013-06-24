@@ -59,6 +59,13 @@ public class XflLibrary
         this.location = location;
     }
 
+    public function hasItem (id :String, requiredType :Class=null) :Boolean {
+        const result :* = _idToItem[id];
+        if (result === undefined) return false;
+        else if (requiredType != null) return (result is requiredType);
+        else return true;
+    }
+
     public function getItem (id :String, requiredType :Class=null) :* {
         const result :* = _idToItem[id];
         if (result === undefined) throw new Error("Unknown library item '" + id + "'");
@@ -68,6 +75,12 @@ public class XflLibrary
 
     public function isExported (movie :MovieMold) :Boolean {
         return _moldToSymbol.containsKey(movie);
+    }
+
+    public function removeFromExport (item :Object) :void {
+        if (_moldToSymbol.containsKey(item)) {
+            _moldToSymbol.remove(item);
+        }
     }
 
     public function get publishedMovies () :Vector.<MovieMold> {
