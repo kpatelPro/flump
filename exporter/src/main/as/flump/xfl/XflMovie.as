@@ -3,6 +3,7 @@
 
 package flump.xfl {
 
+import flash.utils.Dictionary;
 import flump.display.Movie;
 import flump.mold.KeyframeMold;
 import flump.mold.LayerMold;
@@ -57,7 +58,8 @@ public class XflMovie
             }
         } else {
             for each (var layerEl :XML in layerEls) {
-                if (XmlUtil.getStringAttr(layerEl, "layerType", "") != "guide") {
+                var layerType:String = XmlUtil.getStringAttr(layerEl, "layerType", "");
+                if ((layerType != "guide") && (layerType != "folder")) {
                     movie.layers.unshift(XflLayer.parse(lib, location, layerEl, false));
                 }
             }
@@ -70,5 +72,15 @@ public class XflMovie
 
         return movie;
     }
+
+    // lookup table for filters associated with a given flipbook MovieMold
+    static private var _s_filtersByFlipbookMovieMold :Dictionary = new Dictionary(true);
+    static public function setFiltersForFlipbook(movie :MovieMold, filters :Array) :void {
+        _s_filtersByFlipbookMovieMold[movie] = filters;
+    }
+    static public function getFiltersForFlipbook(movie :MovieMold) :Array {
+        return (movie in _s_filtersByFlipbookMovieMold) ? _s_filtersByFlipbookMovieMold[movie] : [];
+    }
+
 }
 }
