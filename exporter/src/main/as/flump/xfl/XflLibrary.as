@@ -77,7 +77,7 @@ public class XflLibrary
         return _moldToSymbol.containsKey(movie);
     }
 
-    public function removeFromExport (item :Object) :void {
+    protected function removeFromExport (item :Object) :void {
         if (_moldToSymbol.containsKey(item)) {
             _moldToSymbol.remove(item);
         }
@@ -101,7 +101,8 @@ public class XflLibrary
             }
         }
 
-        parseLibraryScale();
+        // Parse for a library scale factor within the asset.
+        parseForLibraryScale();
 
         for each (movie in movies) if (isExported(movie)) prepareForPublishing(movie);
     }
@@ -150,29 +151,35 @@ public class XflLibrary
     }
 
     // Use the scale from library:scale:[0]:[0] to specify a global scale factor over the this library
-    private function parseLibraryScale():void {
-        const specialScaleSymbolId:String = 'scale';
+    private function parseForLibraryScale() :void {
+        const specialScaleSymbolId :String = 'scale';
 
-        // look for keyframe 0 or layer 0 of movie symbol with special name 'scale'
-        if (!hasItem(specialScaleSymbolId, MovieMold)) return;
-        var movie:MovieMold = getItem(specialScaleSymbolId, MovieMold);
+        // get movie symbol with special name 'scale'
+        if (!hasItem(specialScaleSymbolId, MovieMold)) {
+            return;
+        }
+        var movie :MovieMold = getItem(specialScaleSymbolId, MovieMold);
+        
+        // get layer 0, keyframe 0
         if (movie.layers.length == 0) {
             addError(location + ":" + movie.id, ParseError.WARN, 'scale symbol must have a layer');
             return;
         }
-        var layer:LayerMold = movie.layers[0];
+        var layer :LayerMold = movie.layers[0];
         if (layer.keyframes.length == 0) {
             addError(location + ":" + movie.id, ParseError.WARN, 'scale symbol must have a keyframe');
             return;
         }
-        var keyframe:KeyframeMold = layer.keyframes[0];
+        var keyframe :KeyframeMold = layer.keyframes[0];
+        
+        // use the scale from this keyframe as the scale for the library
         if (Math.abs(keyframe.scaleX - keyframe.scaleY) >= 0.01) {
             addError(location + ":" + movie.id, ParseError.WARN, 'scale symbol must specify uniform scale, skipping');
             return;
         }
-        // get the scale
         this.scale = Math.min(keyframe.scaleX, keyframe.scaleY);
-        // make sure we don't export this symbol 
+        
+        // clean up: we don't need to export the special scale symbol 
         removeFromExport(movie);
     }
 
