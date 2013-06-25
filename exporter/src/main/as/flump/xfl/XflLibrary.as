@@ -45,7 +45,7 @@ public class XflLibrary
 
     public var frameRate :Number;
     public var backgroundColor :int;
-    public var libraryScale :Number = 1;
+    public var scale :Number = 1;
 
     // The MD5 of the published library SWF
     public var md5 :String;
@@ -171,7 +171,7 @@ public class XflLibrary
             return;
         }
         // get the scale
-        this.libraryScale = Math.min(keyframe.scaleX, keyframe.scaleY);
+        this.scale = Math.min(keyframe.scaleX, keyframe.scaleY);
         // make sure we don't export this symbol 
         removeFromExport(movie);
     }
@@ -210,8 +210,9 @@ public class XflLibrary
         const mold :LibraryMold = new LibraryMold();
         mold.frameRate = frameRate;
         mold.md5 = md5;
+        var scale :Number = conf.scale * this.scale;
         mold.movies = publishedMovies.map(function (movie :MovieMold, ..._) :MovieMold {
-            return movie.scale(conf.scale);
+            return movie.scale(scale);
         });
         mold.textureGroups = createTextureGroupMolds(atlases);
         return mold;
