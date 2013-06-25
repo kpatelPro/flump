@@ -30,7 +30,7 @@ public class SwfTexture
 
         const klass :Class = Class(lib.swf.getSymbol(movie.id));
         const clip :MovieClip = MovieClip(new klass());
-        clip.gotoAndStop(frame + 1);
+        Util.gotoAndStopDeep(clip, frame + 1);
         const name :String = movie.id + "_flipbook_" + frame;
         return new SwfTexture(name, clip, scale, quality);
     }

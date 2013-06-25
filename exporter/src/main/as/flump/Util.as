@@ -6,6 +6,7 @@ package flump {
 import flash.display.BitmapData;
 import flash.display.DisplayObject;
 import flash.display.IBitmapDrawable;
+import flash.display.MovieClip;
 import flash.geom.Matrix;
 import flash.geom.Point;
 import flash.geom.Rectangle;
@@ -29,6 +30,33 @@ public class Util
         originIcon.addChild(fillRect(9, 1, 0x000000));
         originIcon.flatten();
         return originIcon;
+    }
+
+    /**
+     * Advances a movieClip to a specific frame, including nested movieClips,
+     * simulating how the flash player would normally display this movieClip.
+     * (Used for generating flipbook frames)
+     */
+    public static function gotoAndStopDeep(mc :MovieClip, frame :int) :void {
+        var totalFrames:int = mc.totalFrames;
+
+        // advance this movieClip
+        if (frame <= totalFrames) {
+            // go to the frame directly
+            mc.gotoAndStop(frame);
+        } else {
+            // go to looped frame for shorter clips
+            mc.gotoAndStop(((frame-1) % totalFrames) + 1);
+        }
+
+        // advance child movieClips
+        var nn:int = mc.numChildren;
+        for (var ii:int = 0; ii < nn; ++ii) {
+            var child:MovieClip = mc.getChildAt(ii) as MovieClip;
+            if (child != null) {
+                Util.gotoAndStopDeep(child, frame);
+            }
+        }
     }
 
     /**
