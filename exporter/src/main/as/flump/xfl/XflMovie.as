@@ -4,14 +4,14 @@
 package flump.xfl {
 
 import flash.utils.Dictionary;
-import flump.display.Movie;
-import flump.mold.KeyframeMold;
-import flump.mold.LayerMold;
-import flump.mold.MovieMold;
 
 import com.threerings.util.Set;
 import com.threerings.util.Sets;
 import com.threerings.util.XmlUtil;
+
+import flump.mold.KeyframeMold;
+import flump.mold.LayerMold;
+import flump.mold.MovieMold;
 
 public class XflMovie
 {
@@ -58,7 +58,7 @@ public class XflMovie
             }
         } else {
             for each (var layerEl :XML in layerEls) {
-                var layerType:String = XmlUtil.getStringAttr(layerEl, "layerType", "");
+                var layerType :String = XmlUtil.getStringAttr(layerEl, "layerType", "");
                 if ((layerType != "guide") && (layerType != "folder")) {
                     movie.layers.unshift(XflLayer.parse(lib, location, layerEl, false));
                 }
