@@ -12,6 +12,7 @@ import flash.display.StageQuality;
 import flash.geom.Matrix;
 import flash.geom.Point;
 import flash.geom.Rectangle;
+import flash.utils.Dictionary;
 
 import flump.executor.load.LoadedSwf;
 import flump.xfl.XflLibrary;
@@ -23,23 +24,31 @@ import com.threerings.display.DisplayUtil;
 
 public class Portrait
 {
-    public static function fromSymbolAndBounds (lib :XflLibrary, symbolName :String, boundsName :String) :Portrait {
+    public static const kPortraitMovieNames:Array = ['idle', 'idle0', 'scale'];
+    public static const kPortraitBoundsNames:Array = ['bounds_portrait', 'bounds_full_body'];
+    
+    public static function fromMovieAndBounds (lib :XflLibrary, movieName :String, boundsName :String) :Portrait {
 
         // get MovieMold
-        const mold :MovieMold = lib.getItem(symbolName);
+        if (!lib.hasItem(movieName)) return null;
+        const mold :MovieMold = lib.getItem(movieName);
         if (!mold) return null;
         
         // get translation matrix
-        const xform :Array = XflMovie.getBoundsPortraitXform(mold);
+        const xform :Array = getBoundsPortraitXform(mold, boundsName);
         if (!xform) return null;
         
+        // get bounds
+        const bounds :Rectangle = getBoundsForBoundsName(boundsName);
+        if (!bounds) return null;
+        
         // get symbol movieclip
-        const klass :Class = Class(lib.swf.getSymbol(symbolName));
+        const klass :Class = Class(lib.swf.getSymbol(movieName));
         if (!klass) return null;
         const clip :MovieClip = MovieClip(new klass());
         if (!clip) return null;
-        
-        // search for parent of boundsName within symbol
+
+        // create portrait with these parameters
         return new Portrait(clip, xform, boundsName);
     }
 
@@ -58,7 +67,7 @@ public class Portrait
         var offsetY :Number = _xform[3];
         
         // calculate final clip bounds
-        var boundsRect :Rectangle = new Rectangle(-118.55, -118.55, 237.05, 237.05);
+        var boundsRect :Rectangle = getBoundsForBoundsName(_boundsName);
         var clipRect :Rectangle = new Rectangle(
             boundsRect.x * scaleX, 
             boundsRect.y * scaleY, 
@@ -81,6 +90,31 @@ public class Portrait
     private var _disp :DisplayObjectContainer;
     private var _xform :Array;
     private var _boundsName :String;
+
+    // lookup table for bounds_portrait matrix transforms by MovieMold
+    static private var _s_boundsPortraitXformByMovieMold :Dictionary = new Dictionary(true);
+    static public function setBoundsPortraitXform (movie :MovieMold, boundsName :String, xform :Array) :void {
+        if (!(movie in _s_boundsPortraitXformByMovieMold))
+            _s_boundsPortraitXformByMovieMold[movie] = new Dictionary();
+        _s_boundsPortraitXformByMovieMold[movie][boundsName] = xform;
+    }
+    static public function getBoundsPortraitXform (movie :MovieMold, boundsName :String) :Array {
+        if (movie in _s_boundsPortraitXformByMovieMold) {
+            if (boundsName in _s_boundsPortraitXformByMovieMold[movie]) {
+                return _s_boundsPortraitXformByMovieMold[movie][boundsName];
+            }
+        }
+        return null;
+    }
+    
+    // lookup table for bounds by boundsName
+    static private var _s_boundsByBoundsName :Dictionary = new Dictionary();
+    static public function setBoundsForBoundsName (boundsName :String, bounds :Rectangle) :void {
+        _s_boundsByBoundsName[boundsName] = bounds;
+    }
+    static public function getBoundsForBoundsName(boundsName :String) :Rectangle {
+        return (boundsName in _s_boundsByBoundsName) ? _s_boundsByBoundsName[boundsName] : null;
+    }
     
 }
 }

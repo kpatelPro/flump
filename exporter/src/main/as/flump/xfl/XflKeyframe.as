@@ -11,8 +11,10 @@ import flash.filters.ColorMatrixFilter;
 import flash.filters.DropShadowFilter;
 import flash.filters.GlowFilter;
 import flash.geom.Matrix;
+import flash.geom.Point;
 import flash.geom.Rectangle;
 import flash.utils.Dictionary;
+import flump.Portrait;
 
 import flump.mold.KeyframeMold;
 
@@ -124,26 +126,47 @@ public class XflKeyframe
     }
 
     // parse a shape node for bounds
-    static private function parseShapeForBounds(shapeXml:XML, boundsName:String):void 
+    static private function parseShapeForBounds(shapeXml :XML, boundsName :String) :void 
     {
-        var bounds:Rectangle = new Rectangle();
-     
-        for each (var edgesXml :XML in shapeXml.edges.elements()) {
-            for each (var edgeXml :XML in edgesXml.Edge.elements()) {
-                var edgesVal:String = XmlUtil.getStringAttr(edgeXml, "edges", "");
+        var minX:Number = NaN;
+        var maxX:Number = NaN;
+        var minY:Number = NaN;
+        var maxY:Number = NaN;
+        
+        for each (var edgesXml :XML in shapeXml.edges) {
+            for each (var edgeXml :XML in edgesXml.Edge) {
+                var edgesVal :String = XmlUtil.getStringAttr(edgeXml, "edges", "");
+                // remove S6 style codes 
+                edgesVal = edgesVal.replace(/S(\d)+/g, '');
+                // remove +
+                edgesVal = edgesVal.replace(/\+/g, '');
                 // replace ! | [ ] ( ) / with ,
+                edgesVal = edgesVal.replace(/[\!\|\[\]\(\)]/g, ',');
                 // split with ,
+                var edgePoints:Array = edgesVal.split(',');
                 // for each
-                // split with space
-                // remove S6 from end of 23920S6
-                // divide by 20
-                // -> x y
-                // expand bounds
-                var edges:Array
+                for each (var edgePoint:String in edgePoints) {
+                    // split with space
+                    var coords:Array = edgePoint.split(' ');
+                    if (coords.length == 2) {
+                        // convert from flips (divide by 20)
+                        var x:Number = coords[0] / 20.0;
+                        var y:Number = coords[1] / 20.0;
+                        // expand bounds
+                        if (isNaN(minX) || (x < minX)) minX = x;
+                        if (isNaN(maxX) || (x > maxX)) maxX = x;
+                        if (isNaN(minY) || (y < minY)) minY = y;
+                        if (isNaN(maxY) || (y > maxY)) maxY = y;
+                    }
+                }
             }
         }
         
         // store bounds
+        if (!isNaN(minX) && !isNaN(maxX) && !isNaN(minY) && !isNaN(maxY)) {
+            var bounds :Rectangle = new Rectangle(minX, minY, (maxX-minX), (maxY-minY));
+            Portrait.setBoundsForBoundsName(boundsName, bounds);
+        }
     }
 
     // Parse filters for this symbol+keyframe, store them in a static lookup table

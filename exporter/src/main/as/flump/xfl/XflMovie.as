@@ -5,6 +5,7 @@ package flump.xfl {
 
 import flash.geom.Matrix;
 import flash.utils.Dictionary;
+import flump.Portrait;
 
 import com.threerings.util.Set;
 import com.threerings.util.Sets;
@@ -50,7 +51,7 @@ public class XflMovie
 
         const layerEls :XMLList = xml.timeline.DOMTimeline[0].layers.DOMLayer;
         if (XmlUtil.getStringAttr(layerEls[0], "name") == "flipbook") {
-            movie.layers.push(XflLayer.parse(lib, location, layerEls[0], true));
+            movie.layers.push(XflLayer.parse(lib, location, layerEls[0], true, null));
             if (symbol == null) {
                 lib.addError(location, ParseError.CRIT, "Flipbook movie '" + movie.id + "' not exported");
             }
@@ -63,23 +64,27 @@ public class XflMovie
                 if (layerType == "folder") {
                     // ignore
                 } else if (layerType == "guide") {
-                    // check for bounds_portrait
-                    const boundsSymbolName:String = 'bounds_portrait';
-                    lib.setSuppressingErrors(true);
+                    // check for Portrait bounds xform
+                    lib.incSuppressingErrors();
                     try {
-                        var guideLayer:LayerMold = XflLayer.parse(lib, location, layerEl, false, boundsSymbolName);
+                        var guideLayer:LayerMold = XflLayer.parse(lib, location, layerEl, false, null);
                         var guideKeyframe:KeyframeMold = guideLayer.keyframes[0];
-                        if (guideKeyframe.ref == boundsSymbolName) {
-                            setBoundsPortraitXform(
+                        if (Portrait.kPortraitBoundsNames.indexOf(guideKeyframe.ref) >= 0) {
+                            Portrait.setBoundsPortraitXform(
                                 movie, 
+                                guideKeyframe.ref,
                                 [guideKeyframe.scaleX, guideKeyframe.scaleY, guideKeyframe.x, guideKeyframe.y]
                             )
                         }
-                    }
-                    catch (e :Error) {
-                        // ignore
-                    }
-                    lib.setSuppressingErrors(false);
+                    } catch (e :Error) {}
+                    lib.decSuppressingErrors();
+                } else if (Portrait.kPortraitBoundsNames.indexOf(name) >= 0) {
+                    // parse Portrait bounds
+                    lib.incSuppressingErrors();
+                    try {
+                        XflLayer.parse(lib, location, layerEl, false, name);
+                    } catch (e :Error) {}
+                    lib.decSuppressingErrors();
                 } else {
                     movie.layers.unshift(XflLayer.parse(lib, location, layerEl, false, null));
                 }
@@ -101,15 +106,6 @@ public class XflMovie
     }
     static public function getFiltersForFlipbook(movie :MovieMold) :Array {
         return (movie in _s_filtersByFlipbookMovieMold) ? _s_filtersByFlipbookMovieMold[movie] : [];
-    }
-
-    // lookup table for bounds_portrait matrix transforms by MovieMold
-    static private var _s_boundsPortraitXformByMovieMold :Dictionary = new Dictionary(true);
-    static public function setBoundsPortraitXform(movie :MovieMold, xform :Array) :void {
-        _s_boundsPortraitXformByMovieMold[movie] = xform;
-    }
-    static public function getBoundsPortraitXform(movie :MovieMold) :Array {
-        return (movie in _s_boundsPortraitXformByMovieMold) ? _s_boundsPortraitXformByMovieMold[movie] : null;
     }
 
 }

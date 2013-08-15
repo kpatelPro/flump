@@ -10,6 +10,7 @@ import com.threerings.util.Maps;
 import com.threerings.util.Set;
 import com.threerings.util.Sets;
 import com.threerings.util.XmlUtil;
+import flump.Portrait;
 
 import flash.filesystem.File;
 import flash.utils.ByteArray;
@@ -100,6 +101,16 @@ public class XflLibrary
                 if (xml != null) parseMovie(xml);
             }
         }
+
+        // Parse all Portrait movies
+        incSuppressingErrors();
+        for each (var boundsSymbolName :String in Portrait.kPortraitBoundsNames) {
+            if (_unexportedMovies.containsKey(boundsSymbolName)) {
+                var boundsSymbolXml :XML = _unexportedMovies.remove(boundsSymbolName);
+                if (boundsSymbolXml != null) parseMovie(boundsSymbolXml);
+            }
+        }
+        decSuppressingErrors();
 
         // Parse for a library scale factor within the asset.
         parseForLibraryScale();
@@ -290,12 +301,19 @@ public class XflLibrary
         addError(location, severity, message, e);
     }
 
-    public function setSuppressingErrors(suppress :Boolean):void {
-        _suppressingErrors = suppress;
+    public function get suppressingErrors():Boolean {
+        return (_suppressingErrors > 0);
+    }
+    public function incSuppressingErrors():void {
+        _suppressingErrors++;
+    }
+    public function decSuppressingErrors():void {
+        _suppressingErrors--;
     }
     
+    
     public function addError (location :String, severity :String, message :String, e :Object = null) :void {
-        if (_suppressingErrors) return;
+        if (suppressingErrors) return;
         _errors.push(new ParseError(location, severity, message, e));
     }
 
@@ -451,7 +469,7 @@ public class XflLibrary
     /** Symbol or generated symbol to texture or movie. */
     protected const _idToItem :Dictionary = new Dictionary();
 
-    protected var _suppressingErrors :Boolean = false;
+    protected var _suppressingErrors :int = 0;
 
     protected const _errors :Vector.<ParseError> = new <ParseError>[];
 
