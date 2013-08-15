@@ -4,8 +4,10 @@
 package flump.export {
 
 import flash.filesystem.File;
+import flash.utils.Dictionary;
 
 import flump.xfl.XflLibrary;
+import flump.Portrait;
 
 public class PublishFormat
 {
@@ -36,6 +38,27 @@ public class PublishFormat
         }
 
         return atlases;
+    }
+
+    protected function createPortraits () :Dictionary {
+        
+        // static
+        const symbolNames:Array = ['scale', 'idle', 'idle0'];
+        const boundsSymbolNames:Array = ['bounds_portrait'];
+        
+        // fill portraits with a portrait for each boundsSymbolName
+        var portraits:Dictionary = new Dictionary();
+        for each (var boundsSymbolName:String in boundsSymbolNames) {
+            for each (var symbolName:String in symbolNames) {
+                var portrait:Portrait = Portrait.fromSymbolAndBounds(_lib, symbolName, boundsSymbolName);
+                if (portrait) {
+                    portraits[boundsSymbolName] = portrait;
+                    break;
+                }
+            }
+        }
+        
+        return portraits;
     }
 
     protected var _lib :XflLibrary;

@@ -3,6 +3,7 @@
 
 package flump.xfl {
 
+import flash.geom.Matrix;
 import flash.utils.Dictionary;
 
 import com.threerings.util.Set;
@@ -59,8 +60,28 @@ public class XflMovie
         } else {
             for each (var layerEl :XML in layerEls) {
                 var layerType :String = XmlUtil.getStringAttr(layerEl, "layerType", "");
-                if ((layerType != "guide") && (layerType != "folder")) {
-                    movie.layers.unshift(XflLayer.parse(lib, location, layerEl, false));
+                if (layerType == "folder") {
+                    // ignore
+                } else if (layerType == "guide") {
+                    // check for bounds_portrait
+                    const boundsSymbolName:String = 'bounds_portrait';
+                    lib.setSuppressingErrors(true);
+                    try {
+                        var guideLayer:LayerMold = XflLayer.parse(lib, location, layerEl, false, boundsSymbolName);
+                        var guideKeyframe:KeyframeMold = guideLayer.keyframes[0];
+                        if (guideKeyframe.ref == boundsSymbolName) {
+                            setBoundsPortraitXform(
+                                movie, 
+                                [guideKeyframe.scaleX, guideKeyframe.scaleY, guideKeyframe.x, guideKeyframe.y]
+                            )
+                        }
+                    }
+                    catch (e :Error) {
+                        // ignore
+                    }
+                    lib.setSuppressingErrors(false);
+                } else {
+                    movie.layers.unshift(XflLayer.parse(lib, location, layerEl, false, null));
                 }
             }
         }
@@ -80,6 +101,15 @@ public class XflMovie
     }
     static public function getFiltersForFlipbook(movie :MovieMold) :Array {
         return (movie in _s_filtersByFlipbookMovieMold) ? _s_filtersByFlipbookMovieMold[movie] : [];
+    }
+
+    // lookup table for bounds_portrait matrix transforms by MovieMold
+    static private var _s_boundsPortraitXformByMovieMold :Dictionary = new Dictionary(true);
+    static public function setBoundsPortraitXform(movie :MovieMold, xform :Array) :void {
+        _s_boundsPortraitXformByMovieMold[movie] = xform;
+    }
+    static public function getBoundsPortraitXform(movie :MovieMold) :Array {
+        return (movie in _s_boundsPortraitXformByMovieMold) ? _s_boundsPortraitXformByMovieMold[movie] : null;
     }
 
 }

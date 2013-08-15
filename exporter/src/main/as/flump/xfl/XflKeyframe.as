@@ -11,6 +11,7 @@ import flash.filters.ColorMatrixFilter;
 import flash.filters.DropShadowFilter;
 import flash.filters.GlowFilter;
 import flash.geom.Matrix;
+import flash.geom.Rectangle;
 import flash.utils.Dictionary;
 
 import flump.mold.KeyframeMold;
@@ -23,7 +24,7 @@ public class XflKeyframe
     use namespace xflns;
 
     public static function parse (lib :XflLibrary, baseLocation :String, xml :XML,
-        flipbook :Boolean) :KeyframeMold {
+        flipbook :Boolean, boundsName :String) :KeyframeMold {
 
         const kf :KeyframeMold = new KeyframeMold();
         kf.index = XmlUtil.getIntAttr(xml, "index");
@@ -52,6 +53,8 @@ public class XflKeyframe
                     lib.addError(location, ParseError.CRIT, "There can be only one symbol instance at " +
                         "a time in a keyframe.");
                 } else symbolXml = frameEl;
+            } else if (boundsName && frameEl.name().localName == "DOMShape") {
+                parseShapeForBounds(frameEl, boundsName);
             } else {
                 lib.addError(location, ParseError.CRIT, "Non-symbols may not be in movie layers");
             }
@@ -118,6 +121,29 @@ public class XflKeyframe
         parseFilters(lib, location, kf, symbolXml);
 
         return kf;
+    }
+
+    // parse a shape node for bounds
+    static private function parseShapeForBounds(shapeXml:XML, boundsName:String):void 
+    {
+        var bounds:Rectangle = new Rectangle();
+     
+        for each (var edgesXml :XML in shapeXml.edges.elements()) {
+            for each (var edgeXml :XML in edgesXml.Edge.elements()) {
+                var edgesVal:String = XmlUtil.getStringAttr(edgeXml, "edges", "");
+                // replace ! | [ ] ( ) / with ,
+                // split with ,
+                // for each
+                // split with space
+                // remove S6 from end of 23920S6
+                // divide by 20
+                // -> x y
+                // expand bounds
+                var edges:Array
+            }
+        }
+        
+        // store bounds
     }
 
     // Parse filters for this symbol+keyframe, store them in a static lookup table

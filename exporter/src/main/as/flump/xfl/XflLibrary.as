@@ -103,7 +103,7 @@ public class XflLibrary
 
         // Parse for a library scale factor within the asset.
         parseForLibraryScale();
-
+        
         resolveKfRefs();
         var sortedMovies :Vector.<MovieMold> = getSortedMovies();
         for each (movie in sortedMovies) {
@@ -290,7 +290,12 @@ public class XflLibrary
         addError(location, severity, message, e);
     }
 
-    public function addError (location :String, severity :String, message :String, e :Object=null) :void {
+    public function setSuppressingErrors(suppress :Boolean):void {
+        _suppressingErrors = suppress;
+    }
+    
+    public function addError (location :String, severity :String, message :String, e :Object = null) :void {
+        if (_suppressingErrors) return;
         _errors.push(new ParseError(location, severity, message, e));
     }
 
@@ -445,6 +450,8 @@ public class XflLibrary
 
     /** Symbol or generated symbol to texture or movie. */
     protected const _idToItem :Dictionary = new Dictionary();
+
+    protected var _suppressingErrors :Boolean = false;
 
     protected const _errors :Vector.<ParseError> = new <ParseError>[];
 

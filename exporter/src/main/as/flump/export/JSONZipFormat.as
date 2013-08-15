@@ -3,9 +3,12 @@
 
 package flump.export {
 
+import com.adobe.images.PNGEncoder;
 import flash.filesystem.File;
 import flash.utils.ByteArray;
+import flash.utils.Dictionary;
 import flash.utils.IDataOutput;
+import flump.Portrait;
 
 import deng.fzip.FZip;
 import deng.fzip.FZipFile;
@@ -62,6 +65,18 @@ public class JSONZipFormat extends PublishFormat
         Files.write(outputFile, function (out :IDataOutput) :void {
             zip.serialize(out, /*includeAdler32=*/true);
         });
+        
+        // output portraits
+        var portraits :Dictionary = createPortraits();
+        for (var key:Object in portraits) {
+            var name:String = key as String;
+            var portrait:Portrait = portraits[key] as Portrait;
+            var portraitBytes:ByteArray = PNGEncoder.encode(portrait.toBitmapData());
+            var portraitFile:File = _destDir.resolvePath(_conf.name + "/" + _lib.location + "_" + name + ".png");
+            Files.write(portraitFile, function (out :IDataOutput) :void {
+                out.writeBytes(portraitBytes);
+            });
+        }
     }
 
 }
