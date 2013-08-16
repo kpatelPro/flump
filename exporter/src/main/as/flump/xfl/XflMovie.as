@@ -5,7 +5,6 @@ package flump.xfl {
 
 import flash.geom.Matrix;
 import flash.utils.Dictionary;
-import flump.Portrait;
 
 import com.threerings.util.Set;
 import com.threerings.util.Sets;
@@ -64,7 +63,7 @@ public class XflMovie
                 if (layerType == "folder") {
                     // ignore
                 } else if (layerType == "guide") {
-                    // check for Portrait bounds xform
+                    // check for boundsSymbol xforms
                     lib.incSuppressingErrors();
                     try {
                         var guideLayer:LayerMold = XflLayer.parse(lib, location, layerEl, false, null);
@@ -79,7 +78,7 @@ public class XflMovie
                     } catch (e :Error) {}
                     lib.decSuppressingErrors();
                 } else if (lib.getBoundsSymbols().indexOf(name) >= 0) {
-                    // parse Portrait bounds
+                    // parse boundsSymbol bounds
                     lib.incSuppressingErrors();
                     try {
                         XflLayer.parse(lib, location, layerEl, false, name);

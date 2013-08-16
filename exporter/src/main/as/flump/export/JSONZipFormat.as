@@ -8,7 +8,7 @@ import flash.filesystem.File;
 import flash.utils.ByteArray;
 import flash.utils.Dictionary;
 import flash.utils.IDataOutput;
-import flump.Portrait;
+import flump.Snapshot;
 
 import deng.fzip.FZip;
 import deng.fzip.FZipFile;
@@ -66,11 +66,11 @@ public class JSONZipFormat extends PublishFormat
             zip.serialize(out, /*includeAdler32=*/true);
         });
         
-        // output portraits
+        // output snapshots
         var snapshots :Dictionary = createSnapshots();
         for (var key:Object in snapshots) {
             var name:String = key as String;
-            var snapshot:Portrait = snapshots[key] as Portrait;
+            var snapshot:Snapshot = snapshots[key] as Snapshot;
             var snapshotBytes:ByteArray = PNGEncoder.encode(snapshot.toBitmapData());
             var snapshotFile:File = _destDir.resolvePath(_conf.name + "/" + _lib.location + "_" + name + ".png");
             Files.write(snapshotFile, function (out :IDataOutput) :void {

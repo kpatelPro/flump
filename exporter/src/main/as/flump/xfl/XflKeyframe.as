@@ -14,7 +14,6 @@ import flash.geom.Matrix;
 import flash.geom.Point;
 import flash.geom.Rectangle;
 import flash.utils.Dictionary;
-import flump.Portrait;
 
 import flump.mold.KeyframeMold;
 

@@ -22,9 +22,9 @@ import flump.mold.MovieMold;
 
 import com.threerings.display.DisplayUtil;
 
-public class Portrait
+public class Snapshot
 {
-    public static function fromDescriptor (lib :XflLibrary, descriptor :Object) :Portrait {
+    public static function fromDescriptor (lib :XflLibrary, descriptor :Object) :Snapshot {
         // get MovieMold
         var movieName :String = descriptor.movieName;
         if (!movieName) return null;
@@ -64,11 +64,11 @@ public class Portrait
         }
         // otherwise no clipping
 
-        // create portrait
-        return new Portrait(descriptor, mc, clipRect, clipRectXform);
+        // create snapshot
+        return new Snapshot(descriptor, mc, clipRect, clipRectXform);
     }
     
-    public function Portrait (descriptor :Object, disp :DisplayObjectContainer, clipRect :Rectangle, clipRectXform :Array) {
+    public function Snapshot (descriptor :Object, disp :DisplayObjectContainer, clipRect :Rectangle, clipRectXform :Array) {
         _descriptor = descriptor;
         _disp = disp;
         _clipRect = clipRect; // ? clipRect : _disp.getBounds(_disp);

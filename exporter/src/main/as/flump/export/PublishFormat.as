@@ -7,7 +7,7 @@ import flash.filesystem.File;
 import flash.utils.Dictionary;
 
 import flump.xfl.XflLibrary;
-import flump.Portrait;
+import flump.Snapshot;
 
 public class PublishFormat
 {
@@ -46,7 +46,7 @@ public class PublishFormat
         var snapshots :Dictionary = new Dictionary();
         for (var snapshotName :String in _conf.snapshots) {
             // attempt to create a snapshot
-            var snapshot :Portrait = Portrait.fromDescriptor(_lib, _conf.snapshots[snapshotName]);
+            var snapshot :Snapshot = Snapshot.fromDescriptor(_lib, _conf.snapshots[snapshotName]);
             // if successful, add snapshot to dictionary and move on to next snapshot config
             if (snapshot) {
                 snapshots[snapshotName] = snapshot;

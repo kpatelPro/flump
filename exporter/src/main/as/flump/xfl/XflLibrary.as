@@ -11,7 +11,6 @@ import com.threerings.util.Set;
 import com.threerings.util.Sets;
 import com.threerings.util.XmlUtil;
 import flash.geom.Rectangle;
-import flump.Portrait;
 
 import flash.filesystem.File;
 import flash.utils.ByteArray;
