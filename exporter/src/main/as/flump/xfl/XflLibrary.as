@@ -10,6 +10,7 @@ import com.threerings.util.Maps;
 import com.threerings.util.Set;
 import com.threerings.util.Sets;
 import com.threerings.util.XmlUtil;
+import flump.Bounds;
 import flump.Portrait;
 
 import flash.filesystem.File;
@@ -102,9 +103,10 @@ public class XflLibrary
             }
         }
 
-        // Parse all Portrait movies
+        // Parse all boundsSymbols 
         incSuppressingErrors();
-        for each (var boundsSymbolName :String in Portrait.kPortraitBoundsNames) {
+        var boundsSymbolNames :Array = Bounds.getBoundsSymbolsForLibrary(this);
+        for each (var boundsSymbolName :String in boundsSymbolNames) {
             if (_unexportedMovies.containsKey(boundsSymbolName)) {
                 var boundsSymbolXml :XML = _unexportedMovies.remove(boundsSymbolName);
                 if (boundsSymbolXml != null) parseMovie(boundsSymbolXml);

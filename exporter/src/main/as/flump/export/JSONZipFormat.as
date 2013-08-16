@@ -67,14 +67,14 @@ public class JSONZipFormat extends PublishFormat
         });
         
         // output portraits
-        var portraits :Dictionary = createPortraits();
-        for (var key:Object in portraits) {
+        var snapshots :Dictionary = createSnapshots();
+        for (var key:Object in snapshots) {
             var name:String = key as String;
-            var portrait:Portrait = portraits[key] as Portrait;
-            var portraitBytes:ByteArray = PNGEncoder.encode(portrait.toBitmapData());
-            var portraitFile:File = _destDir.resolvePath(_conf.name + "/" + _lib.location + "_" + name + ".png");
-            Files.write(portraitFile, function (out :IDataOutput) :void {
-                out.writeBytes(portraitBytes);
+            var snapshot:Portrait = snapshots[key] as Portrait;
+            var snapshotBytes:ByteArray = PNGEncoder.encode(snapshot.toBitmapData());
+            var snapshotFile:File = _destDir.resolvePath(_conf.name + "/" + _lib.location + "_" + name + ".png");
+            Files.write(snapshotFile, function (out :IDataOutput) :void {
+                out.writeBytes(snapshotBytes);
             });
         }
     }

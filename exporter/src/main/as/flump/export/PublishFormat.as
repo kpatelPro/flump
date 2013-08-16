@@ -40,29 +40,20 @@ public class PublishFormat
         return atlases;
     }
 
-    protected function createPortraits () :Dictionary {
+    protected function createSnapshots () :Dictionary {
         
+        var snapshots :Dictionary = new Dictionary();
         // fill portraits with a portrait for each boundsSymbolName
-        var portraits:Dictionary = new Dictionary();
-        for each (var boundsSymbolName :String in Portrait.kPortraitBoundsNames) {
-            // for each bounds name, search movies for bounds until one is found
-            for each (var movieSymbolName :String in Portrait.kPortraitMovieNames) {
-                var portrait :Portrait = Portrait.fromMovieAndBounds(_lib, movieSymbolName, boundsSymbolName);
-                // if found, add portrait to dictionary and move on to next boundsSymbolName
-                if (portrait) {
-                    var portraitName :String = boundsSymbolName;
-                    var nameParts :Array = boundsSymbolName.split('_');
-                    if (nameParts.length > 1) {
-                        nameParts.shift();
-                        portraitName = nameParts.join('_');
-                    }
-                    portraits[portraitName] = portrait;
-                    break;
-                }
+        for (var snapshotName :String in _conf.snapshots) {
+            // for each portrait name, attempt to create a portrait
+            var snapshot :Portrait = Portrait.fromDescriptor(_lib, _conf.snapshots[snapshotName]);
+            // if found, add portrait to dictionary and move on to next boundsSymbolName
+            if (snapshot) {
+                snapshots[snapshotName] = snapshot;
             }
         }
         
-        return portraits;
+        return snapshots;
     }
 
     protected var _lib :XflLibrary;

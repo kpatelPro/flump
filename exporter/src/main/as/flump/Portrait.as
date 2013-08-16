@@ -24,55 +24,59 @@ import com.threerings.display.DisplayUtil;
 
 public class Portrait
 {
-    public static const kPortraitMovieNames:Array = ['idle', 'idle0', 'scale'];
-    public static const kPortraitBoundsNames:Array = ['bounds_portrait', 'bounds_full_body'];
-    
-    public static function fromMovieAndBounds (lib :XflLibrary, movieName :String, boundsName :String) :Portrait {
-
+    public static function fromDescriptor (lib :XflLibrary, descriptor :Object) :Portrait {
         // get MovieMold
+        var movieName :String = descriptor.movieName;
+        if (!movieName) return null;
         if (!lib.hasItem(movieName)) return null;
         const mold :MovieMold = lib.getItem(movieName);
         if (!mold) return null;
         
-        // get translation matrix
-        const xform :Array = getBoundsPortraitXform(mold, boundsName);
-        if (!xform) return null;
-        
-        // get bounds
-        const bounds :Rectangle = getBoundsForBoundsName(boundsName);
-        if (!bounds) return null;
-        
         // get symbol movieclip
         const klass :Class = Class(lib.swf.getSymbol(movieName));
         if (!klass) return null;
-        const clip :MovieClip = MovieClip(new klass());
-        if (!clip) return null;
+        const mc :MovieClip = MovieClip(new klass());
+        if (!mc) return null;
 
-        // create portrait with these parameters
-        return new Portrait(clip, xform, boundsName);
+        // get clip info
+        var clipRect :Rectangle = null; 
+        var clipRectXform :Array = [1, 1, 0, 0]; // identity transform
+        // if clipping with a bounds name, set the clip values
+        if (descriptor.clipBoundsName) {
+            // get bounds
+            clipRect = Bounds.getBoundsForBoundsName(lib, descriptor.clipBoundsName);
+            if (!clipRect) return null;
+            
+            // get translation matrix
+            clipRectXform = Bounds.getBoundsPortraitXform(mold, descriptor.clipBoundsName);
+            if (!clipRectXform) return null;
+        }
+        // otherwise no clipping
+
+        // create portrait
+        return new Portrait(mc, clipRect, clipRectXform);
     }
-
-    public function Portrait (disp :DisplayObjectContainer, xform :Array, boundsName :String) {
+    
+    public function Portrait (disp :DisplayObjectContainer, clipRect :Rectangle, clipRectXform :Array) {
         _disp = disp;
-        _xform = xform;
-        _boundsName = boundsName;
+        _clipRect = clipRect ? clipRect : _disp.getBounds(_disp);
+        _clipRectXform = clipRectXform;
     }
     
     public function toBitmapData () :BitmapData {
         
         // parse xform parameters
-        var scaleX :Number = _xform[0];
-        var scaleY :Number = _xform[1];
-        var offsetX :Number = _xform[2];
-        var offsetY :Number = _xform[3];
+        var scaleX :Number = _clipRectXform[0];
+        var scaleY :Number = _clipRectXform[1];
+        var offsetX :Number = _clipRectXform[2];
+        var offsetY :Number = _clipRectXform[3];
         
         // calculate final clip bounds
-        var boundsRect :Rectangle = getBoundsForBoundsName(_boundsName);
         var clipRect :Rectangle = new Rectangle(
-            boundsRect.x * scaleX, 
-            boundsRect.y * scaleY, 
-            boundsRect.width * scaleX, 
-            boundsRect.height * scaleY); 
+            _clipRect.x * scaleX, 
+            _clipRect.y * scaleY, 
+            _clipRect.width * scaleX, 
+            _clipRect.height * scaleY); 
         clipRect.offset(offsetX, offsetY);
         
         // render with vector renderer
@@ -88,33 +92,7 @@ public class Portrait
     }
 
     private var _disp :DisplayObjectContainer;
-    private var _xform :Array;
-    private var _boundsName :String;
-
-    // lookup table for bounds_portrait matrix transforms by MovieMold
-    static private var _s_boundsPortraitXformByMovieMold :Dictionary = new Dictionary(true);
-    static public function setBoundsPortraitXform (movie :MovieMold, boundsName :String, xform :Array) :void {
-        if (!(movie in _s_boundsPortraitXformByMovieMold))
-            _s_boundsPortraitXformByMovieMold[movie] = new Dictionary();
-        _s_boundsPortraitXformByMovieMold[movie][boundsName] = xform;
-    }
-    static public function getBoundsPortraitXform (movie :MovieMold, boundsName :String) :Array {
-        if (movie in _s_boundsPortraitXformByMovieMold) {
-            if (boundsName in _s_boundsPortraitXformByMovieMold[movie]) {
-                return _s_boundsPortraitXformByMovieMold[movie][boundsName];
-            }
-        }
-        return null;
-    }
-    
-    // lookup table for bounds by boundsName
-    static private var _s_boundsByBoundsName :Dictionary = new Dictionary();
-    static public function setBoundsForBoundsName (boundsName :String, bounds :Rectangle) :void {
-        _s_boundsByBoundsName[boundsName] = bounds;
-    }
-    static public function getBoundsForBoundsName(boundsName :String) :Rectangle {
-        return (boundsName in _s_boundsByBoundsName) ? _s_boundsByBoundsName[boundsName] : null;
-    }
-    
+    private var _clipRect :Rectangle;
+    private var _clipRectXform :Array;
 }
 }

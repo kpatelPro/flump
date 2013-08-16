@@ -14,6 +14,7 @@ import flash.geom.Matrix;
 import flash.geom.Point;
 import flash.geom.Rectangle;
 import flash.utils.Dictionary;
+import flump.Bounds;
 import flump.Portrait;
 
 import flump.mold.KeyframeMold;
@@ -56,7 +57,7 @@ public class XflKeyframe
                         "a time in a keyframe.");
                 } else symbolXml = frameEl;
             } else if (boundsName && frameEl.name().localName == "DOMShape") {
-                parseShapeForBounds(frameEl, boundsName);
+                parseShapeForBounds(lib, frameEl, boundsName);
             } else {
                 lib.addError(location, ParseError.CRIT, "Non-symbols may not be in movie layers");
             }
@@ -126,7 +127,7 @@ public class XflKeyframe
     }
 
     // parse a shape node for bounds
-    static private function parseShapeForBounds(shapeXml :XML, boundsName :String) :void 
+    static private function parseShapeForBounds(lib :XflLibrary, shapeXml :XML, boundsName :String) :void 
     {
         var minX:Number = NaN;
         var maxX:Number = NaN;
@@ -165,7 +166,7 @@ public class XflKeyframe
         // store bounds
         if (!isNaN(minX) && !isNaN(maxX) && !isNaN(minY) && !isNaN(maxY)) {
             var bounds :Rectangle = new Rectangle(minX, minY, (maxX-minX), (maxY-minY));
-            Portrait.setBoundsForBoundsName(boundsName, bounds);
+            Bounds.setBoundsForBoundsName(lib, boundsName, bounds);
         }
     }
 

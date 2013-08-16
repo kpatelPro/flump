@@ -5,6 +5,7 @@ package flump.xfl {
 
 import flash.geom.Matrix;
 import flash.utils.Dictionary;
+import flump.Bounds;
 import flump.Portrait;
 
 import com.threerings.util.Set;
@@ -69,8 +70,8 @@ public class XflMovie
                     try {
                         var guideLayer:LayerMold = XflLayer.parse(lib, location, layerEl, false, null);
                         var guideKeyframe:KeyframeMold = guideLayer.keyframes[0];
-                        if (Portrait.kPortraitBoundsNames.indexOf(guideKeyframe.ref) >= 0) {
-                            Portrait.setBoundsPortraitXform(
+                        if (Bounds.getBoundsSymbolsForLibrary(lib).indexOf(guideKeyframe.ref) >= 0) {
+                            Bounds.setBoundsPortraitXform(
                                 movie, 
                                 guideKeyframe.ref,
                                 [guideKeyframe.scaleX, guideKeyframe.scaleY, guideKeyframe.x, guideKeyframe.y]
@@ -78,7 +79,7 @@ public class XflMovie
                         }
                     } catch (e :Error) {}
                     lib.decSuppressingErrors();
-                } else if (Portrait.kPortraitBoundsNames.indexOf(name) >= 0) {
+                } else if (Bounds.getBoundsSymbolsForLibrary(lib).indexOf(name) >= 0) {
                     // parse Portrait bounds
                     lib.incSuppressingErrors();
                     try {

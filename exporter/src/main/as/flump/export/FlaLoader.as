@@ -5,6 +5,7 @@ package flump.export {
 
 import flash.filesystem.File;
 import flash.utils.ByteArray;
+import flump.Bounds;
 
 import deng.fzip.FZip;
 import deng.fzip.FZipFile;
@@ -20,11 +21,12 @@ import com.threerings.util.Log;
 
 public class FlaLoader
 {
-    public function load (name :String, file :File) :Future {
+    public function load (name :String, file :File, projectConf :ProjectConf) :Future {
         log.info("Loading fla", "path", file.nativePath, "name", name);
 
         const future :FutureTask = new FutureTask();
         _library = new XflLibrary(name);
+        Bounds.setBoundsSymbolsForLibrary(_library, projectConf.boundsSymbols);
         _loader.terminated.connect(function (..._) :void {
             _library.finishLoading();
             future.succeed(_library);
