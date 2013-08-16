@@ -40,57 +40,125 @@ public class Portrait
 
         // get clip info
         var clipRect :Rectangle = null; 
-        var clipRectXform :Array = [1, 1, 0, 0]; // identity transform
+        var clipRectXform :Array = null; // identity transform
         // if clipping with a bounds name, set the clip values
-        if (descriptor.clipBoundsName) {
-            // get bounds
-            clipRect = Bounds.getBoundsForBoundsName(lib, descriptor.clipBoundsName);
-            if (!clipRect) return null;
-            
-            // get translation matrix
-            clipRectXform = Bounds.getBoundsPortraitXform(mold, descriptor.clipBoundsName);
-            if (!clipRectXform) return null;
+        if (descriptor.clipBoundsSymbol) {
+            // if is array, check for any of the names in the array
+            var clipBoundsSymbols :Array = (descriptor.clipBoundsSymbol as Array) ? descriptor.clipBoundsSymbol : [descriptor.clipBoundsSymbol];
+            for each (var clipBoundsSymbol :String in clipBoundsSymbols) {
+                // get bounds
+                clipRect = lib.getBoundsSymbolBounds(clipBoundsSymbol);
+                // get translation matrix
+                clipRectXform = lib.getBoundsSymbolXformForMovie(clipBoundsSymbol, mold);
+                if (clipRect && clipRectXform) break;
+            }
+            if (!clipRect || !clipRectXform) {
+                // if clipBounds is not optional, return null
+                if (!descriptor.clipBoundsOptional) {
+                    return null;
+                }
+                // fall through and use full image
+                clipRect = null;
+                clipRectXform = null;
+            }
         }
         // otherwise no clipping
 
         // create portrait
-        return new Portrait(mc, clipRect, clipRectXform);
+        return new Portrait(descriptor, mc, clipRect, clipRectXform);
     }
     
-    public function Portrait (disp :DisplayObjectContainer, clipRect :Rectangle, clipRectXform :Array) {
+    public function Portrait (descriptor :Object, disp :DisplayObjectContainer, clipRect :Rectangle, clipRectXform :Array) {
+        _descriptor = descriptor;
         _disp = disp;
-        _clipRect = clipRect ? clipRect : _disp.getBounds(_disp);
-        _clipRectXform = clipRectXform;
+        _clipRect = clipRect; // ? clipRect : _disp.getBounds(_disp);
+        _clipRectXform = clipRectXform; // ? clipRectXform : [1, 1, 0, 0]; // identity
     }
     
     public function toBitmapData () :BitmapData {
         
+        if (_clipRect) {
+            return toBitmapDataWithClip();
+        } else {
+            return toBitmapDataNoClip();
+        }
+    }
+    
+    public function toBitmapDataWithClip () :BitmapData {
+        
         // parse xform parameters
-        var scaleX :Number = _clipRectXform[0];
-        var scaleY :Number = _clipRectXform[1];
-        var offsetX :Number = _clipRectXform[2];
-        var offsetY :Number = _clipRectXform[3];
+        var clipScaleX :Number = _clipRectXform[0];
+        var clipScaleY :Number = _clipRectXform[1];
+        var clipOffsetX :Number = _clipRectXform[2];
+        var clipOffsetY :Number = _clipRectXform[3];
         
-        // calculate final clip bounds
+        // calculate transformed clip bounds
         var clipRect :Rectangle = new Rectangle(
-            _clipRect.x * scaleX, 
-            _clipRect.y * scaleY, 
-            _clipRect.width * scaleX, 
-            _clipRect.height * scaleY); 
-        clipRect.offset(offsetX, offsetY);
-        
-        // render with vector renderer
+            _clipRect.x * clipScaleX, 
+            _clipRect.y * clipScaleY, 
+            _clipRect.width * clipScaleX, 
+            _clipRect.height * clipScaleY); 
+        clipRect.offset(clipOffsetX, clipOffsetY);
+
+        // offset upper left
         var m :Matrix = new Matrix();
         m.translate( -(_disp.x + clipRect.x), -(_disp.y + clipRect.y));
         clipRect.offset( -clipRect.x, -clipRect.y);
-        
-        // render!
+
+        // adjust scale
+        var scale :Number = getDesiredScale(clipRect.width, clipRect.height);
+        m.scale(scale, scale);
+        clipRect.width *= scale;
+        clipRect.height *= scale;
+
+        // render with vector renderer
         var bmd :BitmapData = new BitmapData(Math.ceil(clipRect.width), Math.ceil(clipRect.height), true, 0x00);
         bmd.drawWithQuality(_disp, m, null, null, clipRect, true, StageQuality.BEST);
 
+        // return result
         return bmd;
     }
 
+    public function toBitmapDataNoClip () :BitmapData {
+        
+        // swfTexture has functionality to check for visible bounds (from filters), so let's leverage that
+        var swfTexture :SwfTexture = new SwfTexture('snapshot', _disp, 1.0, StageQuality.BEST);
+        
+        // adjust scale
+        var scale :Number = getDesiredScale(swfTexture.w, swfTexture.h);
+        swfTexture.setScale(scale);
+
+        // create bitmap data
+        return swfTexture.toBitmapData();
+    }
+
+    // get desired uniform scale
+    public function getDesiredScale (dispWidth :Number, dispHeight :Number) :Number {
+        
+        var scale:Number = 1.0;
+        var desiredWidth :Number = NaN;
+        var desiredHeight :Number = NaN;
+        
+        // get params from descriptor
+        if (_descriptor.maxWidth) desiredWidth = _descriptor.maxWidth;
+        if (_descriptor.maxHeight) desiredHeight = _descriptor.maxHeight;
+        
+        // grow/shrink size to fit snugly within desired width/height, preserving aspect ratio        
+        if (!isNaN(desiredWidth) && !isNaN(desiredHeight)) {
+            var scaleX:Number = desiredWidth / dispWidth;
+            var scaleY:Number = desiredHeight / dispHeight;
+            scale = Math.min(scaleX, scaleY);
+        } else if (!isNaN(desiredWidth)) {
+            scale = desiredWidth / dispWidth;
+        } else if (!isNaN(desiredHeight)) {
+            scale = desiredHeight / dispHeight;
+        }
+
+        // return scale
+        return scale;
+    }
+    
+    private var _descriptor :Object;
     private var _disp :DisplayObjectContainer;
     private var _clipRect :Rectangle;
     private var _clipRectXform :Array;

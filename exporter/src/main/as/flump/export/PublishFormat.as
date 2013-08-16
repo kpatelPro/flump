@@ -42,12 +42,12 @@ public class PublishFormat
 
     protected function createSnapshots () :Dictionary {
         
+        // create a snapshot for each snapshot config
         var snapshots :Dictionary = new Dictionary();
-        // fill portraits with a portrait for each boundsSymbolName
         for (var snapshotName :String in _conf.snapshots) {
-            // for each portrait name, attempt to create a portrait
+            // attempt to create a snapshot
             var snapshot :Portrait = Portrait.fromDescriptor(_lib, _conf.snapshots[snapshotName]);
-            // if found, add portrait to dictionary and move on to next boundsSymbolName
+            // if successful, add snapshot to dictionary and move on to next snapshot config
             if (snapshot) {
                 snapshots[snapshotName] = snapshot;
             }

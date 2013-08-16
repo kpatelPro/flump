@@ -14,7 +14,6 @@ import flash.geom.Matrix;
 import flash.geom.Point;
 import flash.geom.Rectangle;
 import flash.utils.Dictionary;
-import flump.Bounds;
 import flump.Portrait;
 
 import flump.mold.KeyframeMold;
@@ -27,7 +26,7 @@ public class XflKeyframe
     use namespace xflns;
 
     public static function parse (lib :XflLibrary, baseLocation :String, xml :XML,
-        flipbook :Boolean, boundsName :String) :KeyframeMold {
+        flipbook :Boolean, boundsSymbol :String) :KeyframeMold {
 
         const kf :KeyframeMold = new KeyframeMold();
         kf.index = XmlUtil.getIntAttr(xml, "index");
@@ -56,8 +55,8 @@ public class XflKeyframe
                     lib.addError(location, ParseError.CRIT, "There can be only one symbol instance at " +
                         "a time in a keyframe.");
                 } else symbolXml = frameEl;
-            } else if (boundsName && frameEl.name().localName == "DOMShape") {
-                parseShapeForBounds(lib, frameEl, boundsName);
+            } else if (boundsSymbol && frameEl.name().localName == "DOMShape") {
+                parseShapeForBounds(lib, frameEl, boundsSymbol);
             } else {
                 lib.addError(location, ParseError.CRIT, "Non-symbols may not be in movie layers");
             }
@@ -127,7 +126,7 @@ public class XflKeyframe
     }
 
     // parse a shape node for bounds
-    static private function parseShapeForBounds(lib :XflLibrary, shapeXml :XML, boundsName :String) :void 
+    static private function parseShapeForBounds(lib :XflLibrary, shapeXml :XML, boundsSymbol :String) :void 
     {
         var minX:Number = NaN;
         var maxX:Number = NaN;
@@ -166,7 +165,7 @@ public class XflKeyframe
         // store bounds
         if (!isNaN(minX) && !isNaN(maxX) && !isNaN(minY) && !isNaN(maxY)) {
             var bounds :Rectangle = new Rectangle(minX, minY, (maxX-minX), (maxY-minY));
-            Bounds.setBoundsForBoundsName(lib, boundsName, bounds);
+            lib.setBoundsSymbolBounds(boundsSymbol, bounds);
         }
     }
 

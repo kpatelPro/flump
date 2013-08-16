@@ -5,7 +5,6 @@ package flump.export {
 
 import flash.filesystem.File;
 import flash.utils.ByteArray;
-import flump.Bounds;
 
 import flump.executor.Executor;
 import flump.executor.Future;
@@ -23,7 +22,7 @@ public class XflLoader
 
         const future :FutureTask = new FutureTask();
         _library = new XflLibrary(name);
-        Bounds.setBoundsSymbolsForLibrary(_library, projectConf.boundsSymbols);
+        _library.setBoundsSymbols(projectConf.boundsSymbols);
         _loader.terminated.connect(function (..._) :void {
             _library.finishLoading();
             future.succeed(_library);
