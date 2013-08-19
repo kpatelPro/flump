@@ -4,8 +4,10 @@
 package flump.export {
 
 import flash.filesystem.File;
+import flash.utils.Dictionary;
 
 import flump.xfl.XflLibrary;
+import flump.Snapshot;
 
 public class PublishFormat
 {
@@ -36,6 +38,22 @@ public class PublishFormat
         }
 
         return atlases;
+    }
+
+    protected function createSnapshots () :Dictionary {
+        
+        // create a snapshot for each snapshot config
+        var snapshots :Dictionary = new Dictionary();
+        for (var snapshotName :String in _conf.snapshots) {
+            // attempt to create a snapshot
+            var snapshot :Snapshot = Snapshot.fromDescriptor(_lib, _conf.snapshots[snapshotName]);
+            // if successful, add snapshot to dictionary and move on to next snapshot config
+            if (snapshot) {
+                snapshots[snapshotName] = snapshot;
+            }
+        }
+        
+        return snapshots;
     }
 
     protected var _lib :XflLibrary;

@@ -10,6 +10,7 @@ import com.threerings.util.Maps;
 import com.threerings.util.Set;
 import com.threerings.util.Sets;
 import com.threerings.util.XmlUtil;
+import flash.geom.Rectangle;
 
 import flash.filesystem.File;
 import flash.utils.ByteArray;
@@ -101,9 +102,20 @@ public class XflLibrary
             }
         }
 
+        // Parse all boundsSymbols 
+        incSuppressingErrors();
+        var boundsSymbols :Array = getBoundsSymbols();
+        for each (var boundsSymbol :String in boundsSymbols) {
+            if (_unexportedMovies.containsKey(boundsSymbol)) {
+                var boundsSymbolXml :XML = _unexportedMovies.remove(boundsSymbol);
+                if (boundsSymbolXml != null) parseMovie(boundsSymbolXml);
+            }
+        }
+        decSuppressingErrors();
+
         // Parse for a library scale factor within the asset.
         parseForLibraryScale();
-
+        
         resolveKfRefs();
         var sortedMovies :Vector.<MovieMold> = getSortedMovies();
         for each (movie in sortedMovies) {
@@ -290,7 +302,19 @@ public class XflLibrary
         addError(location, severity, message, e);
     }
 
-    public function addError (location :String, severity :String, message :String, e :Object=null) :void {
+    public function get suppressingErrors():Boolean {
+        return (_suppressingErrors > 0);
+    }
+    public function incSuppressingErrors():void {
+        _suppressingErrors++;
+    }
+    public function decSuppressingErrors():void {
+        _suppressingErrors--;
+    }
+    
+    
+    public function addError (location :String, severity :String, message :String, e :Object = null) :void {
+        if (suppressingErrors) return;
         _errors.push(new ParseError(location, severity, message, e));
     }
 
@@ -431,6 +455,34 @@ public class XflLibrary
         return groups;
     }
 
+    public function setBoundsSymbols (boundsSymbols :Array) :void {
+        _boundsSymbols = boundsSymbols.concat();
+    }
+    public function getBoundsSymbols() :Array {
+        return _boundsSymbols;
+    }
+    
+    public function setBoundsSymbolBounds (boundsSymbol :String, bounds :Rectangle) :void {
+        _boundsSymbolBounds[boundsSymbol] = bounds;
+    }
+    public function getBoundsSymbolBounds(boundsSymbol :String) :Rectangle {
+        return (boundsSymbol in _boundsSymbolBounds) ? _boundsSymbolBounds[boundsSymbol] : null;
+    }
+    
+    public function setBoundsSymbolXformForMovie (boundsSymbol :String, movie :MovieMold, xform :Array) :void {
+        if (!(boundsSymbol in _boundsSymbolXformsByMovieMold))
+            _boundsSymbolXformsByMovieMold[boundsSymbol] = new Dictionary();
+        _boundsSymbolXformsByMovieMold[boundsSymbol][movie] = xform.concat();
+    }
+    public function getBoundsSymbolXformForMovie (boundsSymbol :String, movie :MovieMold) :Array {
+        if (boundsSymbol in _boundsSymbolXformsByMovieMold) {
+            if (movie in _boundsSymbolXformsByMovieMold[boundsSymbol]) {
+                return _boundsSymbolXformsByMovieMold[boundsSymbol][movie];
+            }
+        }
+        return null;
+    }
+
     /** Library name to XML for movies in the XFL that are not marked for export */
     protected const _unexportedMovies :Map = Maps.newMapOf(String);
 
@@ -443,8 +495,17 @@ public class XflLibrary
     /** Exported movies or movies used in exported movies. */
     protected const _toPublish :Set = Sets.newSetOf(MovieMold);
 
+    /** List of boundsSymbol library items to search for and parse (specified in the ProjectConfig) */
+    protected var _boundsSymbols :Array = [];
+    /* Rectangular bounds of each boundsSymbol library item */
+    protected var _boundsSymbolBounds :Dictionary = new Dictionary();
+    /* The transform of a boundsSymbol instance within a specific Movie */
+    protected var _boundsSymbolXformsByMovieMold :Dictionary = new Dictionary(true);
+    
     /** Symbol or generated symbol to texture or movie. */
     protected const _idToItem :Dictionary = new Dictionary();
+
+    protected var _suppressingErrors :int = 0;
 
     protected const _errors :Vector.<ParseError> = new <ParseError>[];
 
