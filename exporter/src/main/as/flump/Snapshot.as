@@ -77,11 +77,26 @@ public class Snapshot
     
     public function toBitmapData () :BitmapData {
         
+        // render clip to bitmap data
+        var bmd :BitmapData;
         if (_clipRect) {
-            return toBitmapDataWithClip();
+            bmd = toBitmapDataWithClip();
         } else {
-            return toBitmapDataNoClip();
+            bmd = toBitmapDataNoClip();
         }
+        
+        // add border if requested
+        var borderParam :Number = Number(_descriptor.border);
+        if (!isNaN(borderParam))
+        {
+            var border :int = int(borderParam);
+            var paddedBmd :BitmapData = new BitmapData(bmd.width + 2 * border, bmd.height + 2 * border, true, 0x00);
+            paddedBmd.copyPixels(bmd, bmd.rect, new Point(border, border));
+            bmd.dispose();
+            bmd = paddedBmd;
+        }
+        
+        return bmd;
     }
     
     public function toBitmapDataWithClip () :BitmapData {
@@ -142,6 +157,13 @@ public class Snapshot
         // get params from descriptor
         if (_descriptor.maxWidth) desiredWidth = _descriptor.maxWidth;
         if (_descriptor.maxHeight) desiredHeight = _descriptor.maxHeight;
+        if (_descriptor.border) {
+            // render object smaller than final png size to leave room for a whitespace border 
+            var borderParam :Number = Number(_descriptor.border);
+            var border :int = !isNaN(borderParam) ? int(borderParam) : 0;
+            desiredWidth -= 2 * border;
+            desiredHeight -= 2 * border;
+        }
         
         // grow/shrink size to fit snugly within desired width/height, preserving aspect ratio        
         if (!isNaN(desiredWidth) && !isNaN(desiredHeight)) {
