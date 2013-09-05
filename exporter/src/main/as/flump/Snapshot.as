@@ -3,12 +3,19 @@
 
 package flump {
 
+import fl.motion.AdjustColor;
 import flash.display.BitmapData;
 import flash.display.DisplayObject;
 import flash.display.DisplayObjectContainer;
 import flash.display.MovieClip;
 import flash.display.Sprite;
 import flash.display.StageQuality;
+import flash.filters.BevelFilter;
+import flash.filters.BitmapFilter;
+import flash.filters.BlurFilter;
+import flash.filters.ColorMatrixFilter;
+import flash.filters.DropShadowFilter;
+import flash.filters.GlowFilter;
 import flash.geom.Matrix;
 import flash.geom.Point;
 import flash.geom.Rectangle;
@@ -22,6 +29,36 @@ import flump.mold.MovieMold;
 
 import com.threerings.display.DisplayUtil;
 
+/* 
+ * Snapshot
+ * 
+ * Exports png images that are snapshots of a flash symbol.
+ * 
+ * To specify snapshots, add an entry to the .flump project file as so:
+  "exports": [
+    {
+      "snapshots": {
+        "<snapshot_name>": {
+          "maxWidth": 187,
+          "maxHeight": 153,
+          "movieName": "<symbol_name>",
+          "filters": [
+            {
+              "name": "GlowFilter",
+              "color": "#ffff00"
+            }
+          ],
+          "clipBoundsOptional": true,
+          "clipBoundsSymbol": [
+            "bounds_store_icon"
+          ]
+        }
+      },
+      ...
+    }
+ * 
+ */
+    
 public class Snapshot
 {
     public static function fromDescriptor (lib :XflLibrary, descriptor :Object) :Snapshot {
@@ -84,11 +121,19 @@ public class Snapshot
         } else {
             bmd = toBitmapDataNoClip();
         }
+
+        // apply filters if requested
+        var filtersParam :Array = _descriptor.filters ? _descriptor.filters : [];
+        for each (var filterDesc:Object in filtersParam) {
+            var filter :BitmapFilter = filterFromDesc(filterDesc);
+            if (filter) {
+                bmd.applyFilter(bmd, bmd.rect, bmd.rect.topLeft, filter);
+            }
+        }
         
         // add border if requested
         var borderParam :Number = Number(_descriptor.border);
-        if (!isNaN(borderParam))
-        {
+        if (!isNaN(borderParam)) {
             var border :int = int(borderParam);
             var paddedBmd :BitmapData = new BitmapData(bmd.width + 2 * border, bmd.height + 2 * border, true, 0x00);
             paddedBmd.copyPixels(bmd, bmd.rect, new Point(border, border));
@@ -179,7 +224,76 @@ public class Snapshot
         // return scale
         return scale;
     }
+
+    private function filterFromDesc (object :Object) :BitmapFilter {
+        var filter :BitmapFilter = null;
+        if (object.name == "AdjustColorFilter") {
+            var colorFilter :AdjustColor = new AdjustColor();
+            colorFilter.hue = getFilterDescVal(object, "hue", 0);
+            colorFilter.saturation = getFilterDescVal(object, "saturation", 0);
+            colorFilter.brightness = getFilterDescVal(object, "brightness", 0);
+            colorFilter.contrast = getFilterDescVal(object, "contrast", 0);
+            var mMatrix:Array = colorFilter.CalculateFinalFlatArray();
+            filter = new ColorMatrixFilter(mMatrix);
+        } else if (object.name == "BlurFilter") {
+            filter = new BlurFilter(
+                getFilterDescVal(object, "blurX", 5),
+                getFilterDescVal(object, "blurY", 5),
+                getFilterDescVal(object, "quality", 1)
+            );
+        } else if (object.name == "BevelFilter") {
+            filter = new BevelFilter(
+                getFilterDescVal(object, "distance", 5.0),
+                getFilterDescVal(object, "angle", 45),
+                parseInt(getFilterDescVal(object, "highlightColor", "#ffffff").substr(1), 16),
+                getFilterDescVal(object, "highlightAlpha", 1.0),
+                parseInt(getFilterDescVal(object, "shadowColor", "#000000").substr(1), 16),
+                getFilterDescVal(object, "shadowAlpha", 1.0),
+                getFilterDescVal(object, "blurX", 5),
+                getFilterDescVal(object, "blurY", 5),
+                getFilterDescVal(object, "strength", 1),
+                getFilterDescVal(object, "quality", 1),
+                getFilterDescVal(object, "type", "inner"),
+                getFilterDescVal(object, "knockout", false)
+            );
+        } else if (object.name == "DropShadowFilter") {
+            filter = new DropShadowFilter(
+                getFilterDescVal(object, "distance", 5.0),
+                getFilterDescVal(object, "angle", 45),
+                parseInt(getFilterDescVal(object, "color", "#000000").substr(1), 16),
+                getFilterDescVal(object, "alpha", 1.0),
+                getFilterDescVal(object, "blurX", 5),
+                getFilterDescVal(object, "blurY", 5),
+                getFilterDescVal(object, "strength", 1),
+                getFilterDescVal(object, "quality", 1),
+                getFilterDescVal(object, "inner", false),
+                getFilterDescVal(object, "knockout", false),
+                getFilterDescVal(object, "hideObject", false)
+            );
+        } else if (object.name == "GlowFilter") {
+            filter = new GlowFilter(
+                parseInt(getFilterDescVal(object, "color", "#ff0000").substr(1), 16),
+                getFilterDescVal(object, "alpha", 1),
+                getFilterDescVal(object, "blurX", 5),
+                getFilterDescVal(object, "blurY", 5),
+                getFilterDescVal(object, "strength", 1),
+                getFilterDescVal(object, "quality", 1),
+                getFilterDescVal(object, "inner", false),
+                getFilterDescVal(object, "knockout", false)
+            );
+        } else {
+            // parsing for this filter type is unimplemented
+        }
+
+        return filter;
+    }
     
+    private function getFilterDescVal (object :Object, key :String, defaultVal :*) :* {
+        if (key in object)
+            return object[key];
+        return defaultVal;
+    }
+
     private var _descriptor :Object;
     private var _disp :DisplayObjectContainer;
     private var _clipRect :Rectangle;
