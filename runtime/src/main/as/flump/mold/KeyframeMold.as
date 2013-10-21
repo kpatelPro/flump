@@ -8,7 +8,7 @@ public class KeyframeMold
     public var index :int;
 
     /** The length of this keyframe in frames. */
-    public var duration :Number;
+    public var duration :int;
 
     /**
      * The symbol of the image or movie in this keyframe, or null if there is nothing in it.
@@ -50,8 +50,11 @@ public class KeyframeMold
         extractField(o, mold, "ease");
         extractField(o, mold, "tweened");
         extractField(o, mold, "label");
-        return mold
+        return mold;
     }
+
+    /** True if this keyframe does not display anything. */
+    public function get isEmpty () :Boolean { return this.ref == null; }
 
     public function get rotation () :Number { return skewX; }
     // public function set rotation (angle :Number) :void { skewX = skewY = angle; }
