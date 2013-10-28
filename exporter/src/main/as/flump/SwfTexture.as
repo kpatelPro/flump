@@ -37,7 +37,8 @@ public class SwfTexture
 
         const klass :Class = Class(lib.swf.getSymbol(movie.id));
         const clip :MovieClip = MovieClip(new klass());
-        clip.gotoAndStop(frame + 1);
+        Util.gotoAndStopDeep(clip, frame + 1);
+        clip.filters = clip.filters.concat(XflMovie.getFiltersForFlipbook(movie));
         const name :String = movie.id + "_flipbook_" + frame;
         return new SwfTexture(name, clip, scale, quality);
     }
@@ -49,6 +50,7 @@ public class SwfTexture
         const instance :Object = new klass();
         const disp :DisplayObject = (instance is BitmapData) ?
             new Bitmap(BitmapData(instance)) : DisplayObject(instance);
+        disp.filters = disp.filters.concat(tex.filters);
         return new SwfTexture(tex.symbol, disp, scale, quality);
     }
 

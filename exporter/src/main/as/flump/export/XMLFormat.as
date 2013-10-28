@@ -45,7 +45,8 @@ public class XMLFormat extends PublishFormat
         const xml :XML = <resources md5={_lib.md5}/>;
         const prefix :String = _lib.location + "/";
         for each (var movie :MovieMold in _lib.publishedMovies) {
-            var movieXml :XML = movie.scale(_conf.scale).toXML();
+            var scale :Number = _conf.scale * _lib.scale;
+            var movieXml :XML = movie.scale(scale).toXML();
             movieXml.@name = prefix + movieXml.@name;
             movieXml.@frameRate = _lib.frameRate;
             for each (var kf :XML in movieXml..kf) {

@@ -73,6 +73,9 @@ public class Movie extends Sprite
     /** @return true if the movie is currently playing. */
     public function get isPlaying () :Boolean { return _playing; }
 
+    /** @return the color tint to the Movie. */
+    public function get color () :uint { return _color; }
+
     /** @return true if the movie contains the given label. */
     public function hasLabel (label :String) :Boolean {
         return getFrameForLabel(label) >= 0;
@@ -119,10 +122,33 @@ public class Movie extends Sprite
     * a label on this movie.
     */
     public function playTo (position :Object) :Movie {
-       _stopFrame = extractFrame(position);
-       // don't play if we're already at the stop frame
-       _playing = (_frame != _stopFrame);
-       return this;
+       // won't play if we're already at the stop position
+       return stopAt(position).play();
+    }
+
+    /** Sets the stop frame for this Movie.
+     *
+     * @param position the int frame or String label to stop at.
+     *
+     * @return this movie for chaining
+     *
+     * @throws Error if position isn't an int or String, or if it is a String and that String isn't
+     * a label on this movie.
+     */
+    public function stopAt (position :Object) :Movie {
+        _stopFrame = extractFrame(position);
+        return this;
+    }
+
+    /** Sets the movie playing.  Movie will automatically stop at its stopFrame, if one is set, 
+     *  otherwise it will loop forever.
+     *
+     * @return this movie for chaining
+     */
+    public function play () :Movie {
+        // set playing to true unless movie is at the stop frame
+        _playing = (_frame != _stopFrame) || (_stopFrame == NO_FRAME);
+        return this;
     }
 
     /** Stops playback if it's currently active. Doesn't alter the current frame or stop frame. */
@@ -156,7 +182,6 @@ public class Movie extends Sprite
                 if (framesElapsed >= framesRemaining) {
                     _playing = false;
                     newFrame = _stopFrame;
-                    _stopFrame = NO_FRAME;
                 }
             }
             updateFrame(newFrame, dt);
@@ -171,10 +196,20 @@ public class Movie extends Sprite
     }
 
     /** notify this Movie that it has been added to the Layer after initialization */
-    public function addedToLayer() :void
-    {
+    public function addedToLayer() :void {
         goTo(0);
         _skipAdvanceTime = true;
+    }
+
+    /**
+     * @param color tint to apply to the Movie
+     */
+    public function set color(color :uint) :void {
+        if (_color == color) return;
+        _color = color;
+        for (var ii :int = 0; ii < _layers.length; ii++) {
+            _layers[ii].color = color;
+        }
     }
 
     /** @private */
@@ -305,6 +340,8 @@ public class Movie extends Sprite
     private var _skipAdvanceTime :Boolean = false;
     /** @private */
     internal var _playerData :MoviePlayerNode;
+    /** @private */
+    private var _color:uint = 0xffffff;
 
     private static const NO_FRAME :int = -1;
 }

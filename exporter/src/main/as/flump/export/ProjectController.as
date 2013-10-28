@@ -384,11 +384,11 @@ public class ProjectController
         switch (Files.getExtension(file)) {
         case "xfl":
             name = name.substr(0, name.lastIndexOf("/"));
-            load = new XflLoader().load(name, file.parent);
+            load = new XflLoader().load(name, file.parent, _conf);
             break;
         case "fla":
             name = name.substr(0, name.lastIndexOf("."));
-            load = new FlaLoader().load(name, file);
+            load = new FlaLoader().load(name, file, _conf);
             break;
         default:
             // Unsupported file type, ignore

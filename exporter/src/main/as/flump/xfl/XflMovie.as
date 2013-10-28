@@ -3,6 +3,9 @@
 
 package flump.xfl {
 
+import flash.geom.Matrix;
+import flash.utils.Dictionary;
+
 import com.threerings.util.Set;
 import com.threerings.util.Sets;
 import com.threerings.util.XmlUtil;
@@ -47,7 +50,7 @@ public class XflMovie
 
         const layerEls :XMLList = xml.timeline.DOMTimeline[0].layers.DOMLayer;
         if (XmlUtil.getStringAttr(layerEls[0], "name") == "flipbook") {
-            movie.layers.push(XflLayer.parse(lib, location, layerEls[0], true));
+            movie.layers.push(XflLayer.parse(lib, location, layerEls[0], true, null));
             if (symbol == null) {
                 lib.addError(location, ParseError.CRIT, "Flipbook movie '" + movie.id + "' not exported");
             }
@@ -57,8 +60,32 @@ public class XflMovie
         } else {
             for each (var layerEl :XML in layerEls) {
                 var layerType :String = XmlUtil.getStringAttr(layerEl, "layerType", "");
-                if ((layerType != "guide") && (layerType != "folder")) {
-                    movie.layers.unshift(XflLayer.parse(lib, location, layerEl, false));
+                if (layerType == "folder") {
+                    // ignore
+                } else if (layerType == "guide") {
+                    // check for boundsSymbol xforms
+                    lib.incSuppressingErrors();
+                    try {
+                        var guideLayer:LayerMold = XflLayer.parse(lib, location, layerEl, false, null);
+                        var guideKeyframe:KeyframeMold = guideLayer.keyframes[0];
+                        if (lib.getBoundsSymbols().indexOf(guideKeyframe.ref) >= 0) {
+                            lib.setBoundsSymbolXformForMovie(
+                                guideKeyframe.ref,
+                                movie, 
+                                [guideKeyframe.scaleX, guideKeyframe.scaleY, guideKeyframe.x, guideKeyframe.y]
+                            )
+                        }
+                    } catch (e :Error) {}
+                    lib.decSuppressingErrors();
+                } else if (lib.getBoundsSymbols().indexOf(name) >= 0) {
+                    // parse boundsSymbol bounds
+                    lib.incSuppressingErrors();
+                    try {
+                        XflLayer.parse(lib, location, layerEl, false, name);
+                    } catch (e :Error) {}
+                    lib.decSuppressingErrors();
+                } else {
+                    movie.layers.unshift(XflLayer.parse(lib, location, layerEl, false, null));
                 }
             }
         }
@@ -70,5 +97,15 @@ public class XflMovie
 
         return movie;
     }
+
+    // lookup table for filters associated with a given flipbook MovieMold
+    static private var _s_filtersByFlipbookMovieMold :Dictionary = new Dictionary(true);
+    static public function setFiltersForFlipbook(movie :MovieMold, filters :Array) :void {
+        _s_filtersByFlipbookMovieMold[movie] = filters;
+    }
+    static public function getFiltersForFlipbook(movie :MovieMold) :Array {
+        return (movie in _s_filtersByFlipbookMovieMold) ? _s_filtersByFlipbookMovieMold[movie] : [];
+    }
+
 }
 }
