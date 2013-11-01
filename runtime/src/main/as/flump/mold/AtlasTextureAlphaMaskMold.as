@@ -141,6 +141,9 @@ public class AtlasTextureAlphaMaskMold
     protected static function fromBitsString(width :int, height :int, bitsString :String) :AtlasTextureAlphaMaskMold {
         // now loop over base64 string and recompact bits into mask
         
+        // make sure we have our character lookup table
+        buildBase64CharToIntTable();
+
         // every base64 char -> 6 alpha bits
         // every 32 alpha bits -> bits Vector
         var bits :Vector.<uint> = new Vector.<uint>();
