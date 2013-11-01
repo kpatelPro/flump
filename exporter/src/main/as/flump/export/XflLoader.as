@@ -17,11 +17,12 @@ import com.threerings.util.Log;
 
 public class XflLoader
 {
-    public function load (name :String, file :File) :Future {
+    public function load (name :String, file :File, projectConf :ProjectConf) :Future {
         log.info("Loading xfl", "path", file.nativePath, "name", name);
 
         const future :FutureTask = new FutureTask();
         _library = new XflLibrary(name);
+        _library.setBoundsSymbols(projectConf.boundsSymbols);
         _loader.terminated.connect(function (..._) :void {
             _library.finishLoading();
             future.succeed(_library);

@@ -10,6 +10,7 @@ import com.threerings.util.Maps;
 import com.threerings.util.Set;
 import com.threerings.util.Sets;
 import com.threerings.util.XmlUtil;
+import flash.geom.Rectangle;
 
 import flash.filesystem.File;
 import flash.utils.ByteArray;
@@ -45,6 +46,7 @@ public class XflLibrary
 
     public var frameRate :Number;
     public var backgroundColor :int;
+    public var scale :Number = 1;
 
     // The MD5 of the published library SWF
     public var md5 :String;
@@ -58,6 +60,13 @@ public class XflLibrary
         this.location = location;
     }
 
+    public function hasItem (id :String, requiredType :Class=null) :Boolean {
+        const result :* = _idToItem[id];
+        if (result === undefined) return false;
+        else if (requiredType != null) return (result is requiredType);
+        else return true;
+    }
+
     public function getItem (id :String, requiredType :Class=null) :* {
         const result :* = _idToItem[id];
         if (result === undefined) throw new Error("Unknown library item '" + id + "'");
@@ -67,6 +76,12 @@ public class XflLibrary
 
     public function isExported (movie :MovieMold) :Boolean {
         return _moldToSymbol.containsKey(movie);
+    }
+
+    protected function removeFromExport (item :Object) :void {
+        if (_moldToSymbol.containsKey(item)) {
+            _moldToSymbol.remove(item);
+        }
     }
 
     public function get publishedMovies () :Vector.<MovieMold> {
@@ -87,7 +102,107 @@ public class XflLibrary
             }
         }
 
-        for each (movie in movies) if (isExported(movie)) prepareForPublishing(movie);
+        // Parse all boundsSymbols 
+        incSuppressingErrors();
+        var boundsSymbols :Array = getBoundsSymbols();
+        for each (var boundsSymbol :String in boundsSymbols) {
+            if (_unexportedMovies.containsKey(boundsSymbol)) {
+                var boundsSymbolXml :XML = _unexportedMovies.remove(boundsSymbol);
+                if (boundsSymbolXml != null) parseMovie(boundsSymbolXml);
+            }
+        }
+        decSuppressingErrors();
+
+        // Parse for a library scale factor within the asset.
+        parseForLibraryScale();
+        
+        resolveKfRefs();
+        var sortedMovies :Vector.<MovieMold> = getSortedMovies();
+        for each (movie in sortedMovies) {
+            if (isExported(movie)) {
+                propagateFilters(movie, []);
+                prepareForPublishing(movie);
+            }
+        }
+    }
+
+    protected function resolveKfRefs() :void {
+        for each (var movie :MovieMold in movies) {
+            if (movie.flipbook)
+                continue;
+            for each (var layer :LayerMold in movie.layers) {
+                for each (var kf :KeyframeMold in layer.keyframes) {
+                    if (kf.ref == null)
+                        continue;
+                    kf.ref = _libraryNameToId.get(kf.ref);
+                }
+            }
+        }
+    }
+
+    // Get movies sorted such that contained movies are after the movies that contain them
+    protected function getSortedMovies() :Vector.<MovieMold> {
+        var sortedMovies :Vector.<MovieMold> = movies.concat();
+        for (var ii :int = 0; ii < sortedMovies.length; ++ii) {
+            var movie :MovieMold = sortedMovies[ii];
+            for each (var layer :LayerMold in movie.layers) {
+                for each (var kf :KeyframeMold in layer.keyframes) {
+                    if (kf.ref == null)
+                        continue;
+                    var item :Object = _idToItem[kf.ref];
+                    if (item is MovieMold) {
+                        var movieToMove :MovieMold = item as MovieMold;
+                        var arrayIndex :int = sortedMovies.indexOf(movieToMove);
+                        if (arrayIndex < ii) {
+                            sortedMovies.splice(arrayIndex, 1);
+                            ii--;
+                        }
+                        sortedMovies.splice(ii + 1, 0, movieToMove);
+                    }
+                }
+            }
+        }
+
+        return sortedMovies;
+    }
+
+    // Propagate filters down the display graph from a movie and attach them to leaf nodes
+    protected function propagateFilters(movie :MovieMold, inFilters :Array) :void {
+        for each (var layer :LayerMold in movie.layers) {
+            for each (var kf :KeyframeMold in layer.keyframes) {
+                var kfFilters :Array = XflKeyframe.getFiltersForKeyframe(kf);
+                var filters :Array = inFilters.concat(kfFilters);
+                var previousFilters :Array;
+                var swfTexture :SwfTexture = null;
+                if (movie.flipbook) {
+                    // If filters have previously been assigned,
+                    // replace them if new list is longer
+                    previousFilters = XflMovie.getFiltersForFlipbook(movie);
+                    if (filters.length > previousFilters.length) {
+                        XflMovie.setFiltersForFlipbook(movie, filters);
+                    }
+                } else {
+                    if (kf.ref == null)
+                        continue;
+                    var item :Object = _idToItem[kf.ref];
+                    if (item == null){
+                        // Nothing to be done
+                    } else if (item is MovieMold) {
+                        // Propagate filters to component movie
+                        propagateFilters(MovieMold(item), filters);
+                    } else if (item is XflTexture) {
+                        // Assign filters to this XflTexture
+                        const tex :XflTexture = XflTexture(item);
+                        // If filters have previously been assigned,
+                        // replace them if new list is longer
+                        previousFilters = tex.filters;
+                        if (filters.length > previousFilters.length) {
+                            tex.filters = filters;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     protected function prepareForPublishing (movie :MovieMold) :void {
@@ -106,7 +221,6 @@ public class XflLibrary
 
                 } else {
                     if (kf.ref == null) continue;
-                    kf.ref = _libraryNameToId.get(kf.ref);
                     var item :Object = _idToItem[kf.ref];
                     if (item == null) {
                         addTopLevelError(ParseError.CRIT,
@@ -134,6 +248,39 @@ public class XflLibrary
         }
     }
 
+    // Use the scale from library:scale:[0]:[0] to specify a global scale factor over the this library
+    private function parseForLibraryScale() :void {
+        const specialScaleSymbolId :String = 'scale';
+
+        // get movie symbol with special name 'scale'
+        if (!hasItem(specialScaleSymbolId, MovieMold)) {
+            return;
+        }
+        var movie :MovieMold = getItem(specialScaleSymbolId, MovieMold);
+        
+        // get layer 0, keyframe 0
+        if (movie.layers.length == 0) {
+            addError(location + ":" + movie.id, ParseError.WARN, 'scale symbol must have a layer');
+            return;
+        }
+        var layer :LayerMold = movie.layers[0];
+        if (layer.keyframes.length == 0) {
+            addError(location + ":" + movie.id, ParseError.WARN, 'scale symbol must have a keyframe');
+            return;
+        }
+        var keyframe :KeyframeMold = layer.keyframes[0];
+        
+        // use the scale from this keyframe as the scale for the library
+        if (Math.abs(keyframe.scaleX - keyframe.scaleY) >= 0.01) {
+            addError(location + ":" + movie.id, ParseError.WARN, 'scale symbol must specify uniform scale, skipping');
+            return;
+        }
+        this.scale = Math.min(keyframe.scaleX, keyframe.scaleY);
+        
+        // clean up: we don't need to export the special scale symbol 
+        removeFromExport(movie);
+    }
+
     public function createId (item :Object, libraryName :String, symbol :String) :String {
         if (symbol != null) _moldToSymbol.put(item, symbol);
         const id :String = symbol == null ? IMPLICIT_PREFIX + libraryName : symbol;
@@ -156,7 +303,19 @@ public class XflLibrary
         addError(location, severity, message, e);
     }
 
-    public function addError (location :String, severity :String, message :String, e :Object=null) :void {
+    public function get suppressingErrors():Boolean {
+        return (_suppressingErrors > 0);
+    }
+    public function incSuppressingErrors():void {
+        _suppressingErrors++;
+    }
+    public function decSuppressingErrors():void {
+        _suppressingErrors--;
+    }
+    
+    
+    public function addError (location :String, severity :String, message :String, e :Object = null) :void {
+        if (suppressingErrors) return;
         _errors.push(new ParseError(location, severity, message, e));
     }
 
@@ -168,9 +327,9 @@ public class XflLibrary
         const mold :LibraryMold = new LibraryMold();
         mold.frameRate = frameRate;
         mold.md5 = md5;
-        mold.alphaMaskQuality = conf.alphaMaskQuality;
+        var scale :Number = conf.scale * this.scale;
         mold.movies = publishedMovies.map(function (movie :MovieMold, ..._) :MovieMold {
-            return movie.scale(conf.scale);
+            return movie.scale(scale);
         });
         mold.textureGroups = createTextureGroupMolds(atlases);
         return mold;
@@ -297,6 +456,34 @@ public class XflLibrary
         return groups;
     }
 
+    public function setBoundsSymbols (boundsSymbols :Array) :void {
+        _boundsSymbols = boundsSymbols.concat();
+    }
+    public function getBoundsSymbols() :Array {
+        return _boundsSymbols;
+    }
+    
+    public function setBoundsSymbolBounds (boundsSymbol :String, bounds :Rectangle) :void {
+        _boundsSymbolBounds[boundsSymbol] = bounds;
+    }
+    public function getBoundsSymbolBounds(boundsSymbol :String) :Rectangle {
+        return (boundsSymbol in _boundsSymbolBounds) ? _boundsSymbolBounds[boundsSymbol] : null;
+    }
+    
+    public function setBoundsSymbolXformForMovie (boundsSymbol :String, movie :MovieMold, xform :Array) :void {
+        if (!(boundsSymbol in _boundsSymbolXformsByMovieMold))
+            _boundsSymbolXformsByMovieMold[boundsSymbol] = new Dictionary();
+        _boundsSymbolXformsByMovieMold[boundsSymbol][movie] = xform.concat();
+    }
+    public function getBoundsSymbolXformForMovie (boundsSymbol :String, movie :MovieMold) :Array {
+        if (boundsSymbol in _boundsSymbolXformsByMovieMold) {
+            if (movie in _boundsSymbolXformsByMovieMold[boundsSymbol]) {
+                return _boundsSymbolXformsByMovieMold[boundsSymbol][movie];
+            }
+        }
+        return null;
+    }
+
     /** Library name to XML for movies in the XFL that are not marked for export */
     protected const _unexportedMovies :Map = Maps.newMapOf(String);
 
@@ -309,8 +496,17 @@ public class XflLibrary
     /** Exported movies or movies used in exported movies. */
     protected const _toPublish :Set = Sets.newSetOf(MovieMold);
 
+    /** List of boundsSymbol library items to search for and parse (specified in the ProjectConfig) */
+    protected var _boundsSymbols :Array = [];
+    /* Rectangular bounds of each boundsSymbol library item */
+    protected var _boundsSymbolBounds :Dictionary = new Dictionary();
+    /* The transform of a boundsSymbol instance within a specific Movie */
+    protected var _boundsSymbolXformsByMovieMold :Dictionary = new Dictionary(true);
+    
     /** Symbol or generated symbol to texture or movie. */
     protected const _idToItem :Dictionary = new Dictionary();
+
+    protected var _suppressingErrors :int = 0;
 
     protected const _errors :Vector.<ParseError> = new <ParseError>[];
 

@@ -83,7 +83,7 @@ class PackerImpl
         _quality = quality;
         _alphaMaskQuality = alphaMaskQuality;
 
-        var scale :Number = baseScale * scaleFactor;
+        var scale :Number = lib.scale * baseScale * scaleFactor;
 
         for each (var tex :XflTexture in lib.textures) {
             _unpacked.push(SwfTexture.fromTexture(lib.swf, tex, quality, scale));

@@ -3,7 +3,17 @@
 
 package flump.xfl {
 
+import fl.motion.AdjustColor;
+import flash.filters.BevelFilter;
+import flash.filters.BitmapFilter;
+import flash.filters.BlurFilter;
+import flash.filters.ColorMatrixFilter;
+import flash.filters.DropShadowFilter;
+import flash.filters.GlowFilter;
 import flash.geom.Matrix;
+import flash.geom.Point;
+import flash.geom.Rectangle;
+import flash.utils.Dictionary;
 
 import flump.mold.KeyframeMold;
 
@@ -15,7 +25,7 @@ public class XflKeyframe
     use namespace xflns;
 
     public static function parse (lib :XflLibrary, baseLocation :String, xml :XML,
-        flipbook :Boolean) :KeyframeMold {
+        flipbook :Boolean, boundsSymbol :String) :KeyframeMold {
 
         const kf :KeyframeMold = new KeyframeMold();
         kf.index = XmlUtil.getIntAttr(xml, "index");
@@ -44,6 +54,8 @@ public class XflKeyframe
                     lib.addError(location, ParseError.CRIT, "There can be only one symbol instance at " +
                         "a time in a keyframe.");
                 } else symbolXml = frameEl;
+            } else if (boundsSymbol && frameEl.name().localName == "DOMShape") {
+                parseShapeForBounds(lib, frameEl, boundsSymbol);
             } else {
                 lib.addError(location, ParseError.CRIT, "Non-symbols may not be in movie layers");
             }
@@ -106,7 +118,153 @@ public class XflKeyframe
                 kf.alpha = XmlUtil.getNumberAttr(colorXml, "alphaMultiplier", 1);
             }
         }
+
+        parseFilters(lib, location, kf, symbolXml);
+
         return kf;
     }
+
+    // parse a shape node for bounds
+    static private function parseShapeForBounds(lib :XflLibrary, shapeXml :XML, boundsSymbol :String) :void 
+    {
+        var minX:Number = NaN;
+        var maxX:Number = NaN;
+        var minY:Number = NaN;
+        var maxY:Number = NaN;
+        
+        for each (var edgesXml :XML in shapeXml.edges) {
+            for each (var edgeXml :XML in edgesXml.Edge) {
+                var edgesVal :String = XmlUtil.getStringAttr(edgeXml, "edges", "");
+                // remove S6 style codes 
+                edgesVal = edgesVal.replace(/S(\d)+/g, '');
+                // remove +
+                edgesVal = edgesVal.replace(/\+/g, '');
+                // replace ! | [ ] ( ) / with ,
+                edgesVal = edgesVal.replace(/[\!\|\[\]\(\)]/g, ',');
+                // split with ,
+                var edgePoints:Array = edgesVal.split(',');
+                // for each
+                for each (var edgePoint:String in edgePoints) {
+                    // split with space
+                    var coords:Array = edgePoint.split(' ');
+                    if (coords.length == 2) {
+                        // convert from flips (divide by 20)
+                        var x:Number = coords[0] / 20.0;
+                        var y:Number = coords[1] / 20.0;
+                        // expand bounds
+                        if (isNaN(minX) || (x < minX)) minX = x;
+                        if (isNaN(maxX) || (x > maxX)) maxX = x;
+                        if (isNaN(minY) || (y < minY)) minY = y;
+                        if (isNaN(maxY) || (y > maxY)) maxY = y;
+                    }
+                }
+            }
+        }
+        
+        // store bounds
+        if (!isNaN(minX) && !isNaN(maxX) && !isNaN(minY) && !isNaN(maxY)) {
+            var bounds :Rectangle = new Rectangle(minX, minY, (maxX-minX), (maxY-minY));
+            lib.setBoundsSymbolBounds(boundsSymbol, bounds);
+        }
+    }
+
+    // Parse filters for this symbol+keyframe, store them in a static lookup table
+    protected static function parseFilters (lib :XflLibrary, location :String, kf :KeyframeMold, symbolXml :XML) :void {
+        // if filter list is empty, early out
+        if (symbolXml.filters == null) {
+            return;
+        }
+
+        // initialize lookup table entry
+        _s_filtersByKeyframe[kf] = [];
+
+        // for each filter nodes, parse the xml and add a BitmapFilter to the lookup table
+        var filter :BitmapFilter;
+        for each (var filterXml :XML in symbolXml.filters.elements()) {
+            // parse different filter types into their native flash.filter types
+            if (filterXml.name().localName == "AdjustColorFilter") {
+                // <AdjustColorFilter brightness="-100" hue="-32"/>
+                var colorFilter :AdjustColor = new AdjustColor();
+                colorFilter.hue = XmlUtil.getNumberAttr(filterXml, "hue", 0);
+                colorFilter.saturation = XmlUtil.getNumberAttr(filterXml, "saturation", 0);
+                colorFilter.brightness = XmlUtil.getNumberAttr(filterXml, "brightness", 0);
+                colorFilter.contrast = XmlUtil.getNumberAttr(filterXml, "contrast", 0);
+                var mMatrix:Array = colorFilter.CalculateFinalFlatArray();
+                filter = new ColorMatrixFilter(mMatrix);
+                _s_filtersByKeyframe[kf].push(filter);
+            } else if (filterXml.name().localName == "BlurFilter") {
+                // <BlurFilter blurX="4" blurY="4" quality="2"/>
+                filter = new BlurFilter(
+                    XmlUtil.getNumberAttr(filterXml, "blurX", 5),
+                    XmlUtil.getNumberAttr(filterXml, "blurY", 5),
+                    XmlUtil.getNumberAttr(filterXml, "quality", 1)
+                );
+                _s_filtersByKeyframe[kf].push(filter);
+            } else if (filterXml.name().localName == "BevelFilter") {
+                // <BevelFilter blurX="11" blurY="11" quality="2" angle="80.0000022767297" distance="-7" 
+                // highlightColor="#33FF00" shadowColor="#CC00FF" strength="1.28"/>
+                filter = new BevelFilter(
+                    XmlUtil.getNumberAttr(filterXml, "distance", 5.0),
+                    XmlUtil.getNumberAttr(filterXml, "angle", 45),
+                    parseInt(XmlUtil.getStringAttr(filterXml, "highlightColor", "#ffffff").substr(1), 16),
+                    XmlUtil.getNumberAttr(filterXml, "highlightAlpha", 1.0),
+                    parseInt(XmlUtil.getStringAttr(filterXml, "shadowColor", "#000000").substr(1), 16),
+                    XmlUtil.getNumberAttr(filterXml, "shadowAlpha", 1.0),
+                    XmlUtil.getNumberAttr(filterXml, "blurX", 5),
+                    XmlUtil.getNumberAttr(filterXml, "blurY", 5),
+                    XmlUtil.getNumberAttr(filterXml, "strength", 1),
+                    XmlUtil.getNumberAttr(filterXml, "quality", 1),
+                    XmlUtil.getStringAttr(filterXml, "type", "inner"),
+                    XmlUtil.getBooleanAttr(filterXml, "knockout", false)
+                );
+                _s_filtersByKeyframe[kf].push(filter);
+            } else if (filterXml.name().localName == "DropShadowFilter") {
+                // <DropShadowFilter angle="15.9999994308176" blurX="12" blurY="12" color="#9933CC" 
+                // distance="18" hideObject="true" inner="true" knockout="true" quality="3" strength="0.77"/>
+                filter = new DropShadowFilter(
+                    XmlUtil.getNumberAttr(filterXml, "distance", 5.0),
+                    XmlUtil.getNumberAttr(filterXml, "angle", 45),
+                    parseInt(XmlUtil.getStringAttr(filterXml, "color", "#000000").substr(1), 16),
+                    XmlUtil.getNumberAttr(filterXml, "alpha", 1.0),
+                    XmlUtil.getNumberAttr(filterXml, "blurX", 5),
+                    XmlUtil.getNumberAttr(filterXml, "blurY", 5),
+                    XmlUtil.getNumberAttr(filterXml, "strength", 1),
+                    XmlUtil.getNumberAttr(filterXml, "quality", 1),
+                    XmlUtil.getBooleanAttr(filterXml, "inner", false),
+                    XmlUtil.getBooleanAttr(filterXml, "knockout", false),
+                    XmlUtil.getBooleanAttr(filterXml, "hideObject", false)
+                );
+                _s_filtersByKeyframe[kf].push(filter);
+            } else if (filterXml.name().localName == "GlowFilter") {
+                // <GlowFilter blurX="6" blurY="6" color="#00CC66" inner="true" knockout="true" quality="2" strength="0.9"/>
+                filter = new GlowFilter(
+                    parseInt(XmlUtil.getStringAttr(filterXml, "color", "#ff0000").substr(1), 16),
+                    XmlUtil.getNumberAttr(filterXml, "alpha", 1),
+                    XmlUtil.getNumberAttr(filterXml, "blurX", 5),
+                    XmlUtil.getNumberAttr(filterXml, "blurY", 5),
+                    XmlUtil.getNumberAttr(filterXml, "strength", 1),
+                    XmlUtil.getNumberAttr(filterXml, "quality", 1),
+                    XmlUtil.getBooleanAttr(filterXml, "inner", false),
+                    XmlUtil.getBooleanAttr(filterXml, "knockout", false)
+                );
+                _s_filtersByKeyframe[kf].push(filter);
+            } else {
+                // parsing for this filter type is unimplemented
+                lib.addError(location, ParseError.WARN, "Unimplemented parsing for filter type: '" + filterXml.name().localName + "'");
+            }
+
+            // if we only parsed unsupported filter types, remove the lookup table entry
+            if (_s_filtersByKeyframe[kf].length == 0) {
+                delete _s_filtersByKeyframe[kf];
+            }
+        }
+    }
+
+    // lookup table for filters associated with a given KeyframeMold
+    static private var _s_filtersByKeyframe :Dictionary = new Dictionary(true);
+    static public function getFiltersForKeyframe(kf :KeyframeMold) :Array {
+        return (kf in _s_filtersByKeyframe) ? _s_filtersByKeyframe[kf] : [];
+    }
+
 }
 }

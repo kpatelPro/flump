@@ -74,7 +74,12 @@ public class DisplayCreator
     }
 
     public function createMovie (name :String) :Movie {
-        return new Movie(_lib.getItem(name, MovieMold), _lib.frameRate, this);
+        var movieMold :MovieMold = _lib.getItem(name, MovieMold);
+        if (_lib.scale != 1.0) {
+            movieMold = movieMold.scale(_lib.scale);
+            movieMold.fillLabels();
+        }
+        return new Movie(movieMold, _lib.frameRate, this);
     }
 
     public function getMemoryUsage (id :String, subtex :Dictionary = null) :int {

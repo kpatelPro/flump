@@ -36,6 +36,8 @@ public class ExportConf
     public var quality :String = StageQuality.BEST;
     /** The alphaMask data quality. (0 for disabled) */
     public var alphaMaskQuality :Number = 0;
+    /** Snapshot descriptors (none). */
+    public var snapshots :Object = {};
 
     public function get scaleFactorsString () :String {
         return this.additionalScaleFactors.join(",");
@@ -79,6 +81,7 @@ public class ExportConf
         conf.optimize = optional(o, "optimize", OPTIMIZE_MEMORY);
         conf.quality = optional(o, "quality", StageQuality.BEST);
         conf.alphaMaskQuality = optional(o, "alphaMaskQuality", 0);
+        conf.snapshots = optional(o, "snapshots", {});
         return conf;
     }
 
