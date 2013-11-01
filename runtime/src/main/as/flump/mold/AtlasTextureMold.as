@@ -12,6 +12,7 @@ public class AtlasTextureMold
     public var symbol :String;
     public var bounds :Rectangle;
     public var origin :Point;
+    public var alphaMask :AtlasTextureAlphaMaskMold;
 
     public static function fromJSON (o :Object) :AtlasTextureMold {
         const mold :AtlasTextureMold = new AtlasTextureMold();
@@ -20,15 +21,22 @@ public class AtlasTextureMold
         mold.bounds = new Rectangle(rect[0], rect[1], rect[2], rect[3]);
         const orig :Array = require(o, "origin");
         mold.origin = new Point(orig[0], orig[1]);
+        const alphaMask :Object = optional(o, "alphaMask", null);
+        if (alphaMask)
+            mold.alphaMask = AtlasTextureAlphaMaskMold.fromJSON(alphaMask);
         return mold;
     }
 
     public function toJSON (_:*) :Object {
-        return {
+        var result :Object = {
             symbol: symbol,
             rect: [bounds.x, bounds.y, bounds.width, bounds.height],
             origin: [origin.x, origin.y]
         };
+        if (alphaMask)
+            result.alphaMask = alphaMask;
+
+        return result;
     }
 
     public function toXML () :XML {

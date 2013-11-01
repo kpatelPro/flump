@@ -20,11 +20,12 @@ public class TexturePacker
     public function maxAtlasSize (val :int) :TexturePacker { _maxAtlasSize = val; return this; }
     public function optimizeForSpeed (val :Boolean) :TexturePacker { _optimizeForSpeed = val; return this; }
     public function quality (val :String) :TexturePacker { _quality = val; return this; }
+    public function alphaMaskQuality (val :Number) :TexturePacker { _alphaMaskQuality = val; return this; }
     public function filenamePrefix (val :String) :TexturePacker { _filenamePrefix = val; return this; }
 
     public function createAtlases () :Vector.<Atlas> {
         return new PackerImpl(_lib, _baseScale, _scaleFactor, _borderSize,
-            _maxAtlasSize, _optimizeForSpeed, _quality, _filenamePrefix).atlases;
+            _maxAtlasSize, _optimizeForSpeed, _quality, _alphaMaskQuality, _filenamePrefix).atlases;
     }
 
     /** @private */
@@ -40,6 +41,7 @@ public class TexturePacker
     protected var _filenamePrefix :String = "";
     protected var _optimizeForSpeed :Boolean = false;
     protected var _quality :String = StageQuality.BEST;
+    protected var _alphaMaskQuality :Number = 0;
 }
 }
 
@@ -56,6 +58,7 @@ import flump.Util;
 import flump.export.Atlas;
 import flump.mold.AtlasMold;
 import flump.mold.AtlasTextureMold;
+import flump.mold.AtlasTextureAlphaMaskMold;
 import flump.mold.KeyframeMold;
 import flump.mold.MovieMold;
 import flump.xfl.XflLibrary;
@@ -72,12 +75,13 @@ class PackerImpl
 
     public function PackerImpl (lib :XflLibrary, baseScale :Number, scaleFactor :int,
         textureBorderSize :int, maxAtlasSize :int, optimizeForSpeed :Boolean,
-        quality :String, filenamePrefix :String) {
+        quality :String, alphaMaskQuality :Number, filenamePrefix :String) {
 
         _textureBorderSize = textureBorderSize;
         _maxAtlasSize = maxAtlasSize;
         _optimizeForSpeed = optimizeForSpeed;
         _quality = quality;
+        _alphaMaskQuality = alphaMaskQuality;
 
         var scale :Number = baseScale * scaleFactor;
 
@@ -101,7 +105,8 @@ class PackerImpl
                 size.x, size.y,
                 textureBorderSize,
                 scaleFactor,
-                quality));
+                quality,
+                alphaMaskQuality));
             var hasEmptyAtlas :Boolean = true;
 
             // Try to pack each texture into any atlas
@@ -178,6 +183,7 @@ class PackerImpl
     protected var _maxAtlasSize :int;
     protected var _optimizeForSpeed :Boolean;
     protected var _quality :String;
+    protected var _alphaMaskQuality :Number;
 
     protected const _unpacked :Vector.<SwfTexture> = new <SwfTexture>[];
 
@@ -189,7 +195,7 @@ class AtlasImpl
 {
     public var name :String;
 
-    public function AtlasImpl (name :String, w :int, h :int, borderSize :int, scaleFactor :int, quality :String) {
+    public function AtlasImpl (name :String, w :int, h :int, borderSize :int, scaleFactor :int, quality :String, alphaMaskQuality :Number) {
         this.name = name;
         _width = w;
         _height = h;
@@ -198,6 +204,7 @@ class AtlasImpl
         _mask.lock()
         _scaleFactor = scaleFactor;
         _quality = quality;
+        _alphaMaskQuality = alphaMaskQuality;
     }
 
     public function get area () :int { return _width * _height; }
@@ -205,6 +212,8 @@ class AtlasImpl
     public function get scaleFactor () :int { return _scaleFactor; }
 
     public function get quailty () :String { return _quality; }
+
+    public function get alphaMaskQuality () :Number { return _alphaMaskQuality; }
 
     public function get filename () :String { return name + AtlasMold.scaleFactorSuffix(_scaleFactor) + ".png"; }
 
@@ -225,6 +234,8 @@ class AtlasImpl
             texMold.symbol = tex.symbol;
             texMold.bounds = new Rectangle(node.bounds.x, node.bounds.y, tex.w, tex.h);
             texMold.origin = new Point(tex.origin.x, tex.origin.y);
+            if (alphaMaskQuality != 0)
+                texMold.alphaMask = AtlasTextureAlphaMaskMold.fromBitmapData(node.bmd, alphaMaskQuality);
             mold.textures.push(texMold);
         });
         return mold;
@@ -235,8 +246,8 @@ class AtlasImpl
             var constructed :Sprite = new Sprite();
             var collapsedBounds :Rectangle = new Rectangle();
             _nodes.forEach(function (node :Node, ..._) :void {
-                const tex :SwfTexture = node.texture;
-                const bm :Bitmap = new Bitmap(node.texture.toBitmapData(_borderSize), "auto", true);
+                node.bmd = node.texture.toBitmapData(_borderSize);
+                const bm :Bitmap = new Bitmap(node.bmd, "auto", true);
                 constructed.addChild(bm);
                 bm.x = node.paddedBounds.x;
                 bm.y = node.paddedBounds.y;
@@ -306,6 +317,7 @@ class AtlasImpl
     protected var _bitmapData :BitmapData;
     protected var _scaleFactor :int;
     protected var _quality :String;
+    protected var _alphaMaskQuality :Number;
 }
 
 class Node
@@ -313,6 +325,7 @@ class Node
     public var bounds :Rectangle;
     public var paddedBounds :Rectangle;
     public var texture :SwfTexture;
+    public var bmd :BitmapData;
 
     public function Node (x :int, y :int, borderSize :int, texture :SwfTexture) {
         this.texture = texture;

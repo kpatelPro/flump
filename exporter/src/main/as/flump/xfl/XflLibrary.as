@@ -168,6 +168,7 @@ public class XflLibrary
         const mold :LibraryMold = new LibraryMold();
         mold.frameRate = frameRate;
         mold.md5 = md5;
+        mold.alphaMaskQuality = conf.alphaMaskQuality;
         mold.movies = publishedMovies.map(function (movie :MovieMold, ..._) :MovieMold {
             return movie.scale(conf.scale);
         });

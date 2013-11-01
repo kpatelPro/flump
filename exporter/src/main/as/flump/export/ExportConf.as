@@ -34,6 +34,8 @@ public class ExportConf
     public var optimize :String = OPTIMIZE_MEMORY;
     /** The stage quality setting (StageQuality). */
     public var quality :String = StageQuality.BEST;
+    /** The alphaMask data quality. (0 for disabled) */
+    public var alphaMaskQuality :Number = 0;
 
     public function get scaleFactorsString () :String {
         return this.additionalScaleFactors.join(",");
@@ -76,6 +78,7 @@ public class ExportConf
         conf.additionalScaleFactors = optional(o, "additionalScaleFactors", []);
         conf.optimize = optional(o, "optimize", OPTIMIZE_MEMORY);
         conf.quality = optional(o, "quality", StageQuality.BEST);
+        conf.alphaMaskQuality = optional(o, "alphaMaskQuality", 0);
         return conf;
     }
 

@@ -26,6 +26,7 @@ public class PublishFormat
             .maxAtlasSize(_conf.maxAtlasSize)
             .optimizeForSpeed(_conf.optimize == ExportConf.OPTIMIZE_SPEED)
             .quality(_conf.quality)
+            .alphaMaskQuality(_conf.alphaMaskQuality)
             .filenamePrefix(prefix);
 
         var atlases :Vector.<Atlas> = packer.scaleFactor(1).createAtlases(); // 1x atlases

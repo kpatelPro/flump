@@ -16,7 +16,7 @@ import starling.textures.Texture;
 internal class CreatorFactoryImpl implements CreatorFactory {
     public function createImageCreator (mold :AtlasTextureMold, texture :Texture, origin :Point,
         symbol :String) :ImageCreator {
-        return new ImageCreator(texture, origin, symbol);
+        return new ImageCreator(texture, origin, symbol, mold.alphaMask);
     }
 
     public function createMovieCreator (mold :MovieMold, frameRate :Number) :MovieCreator {
