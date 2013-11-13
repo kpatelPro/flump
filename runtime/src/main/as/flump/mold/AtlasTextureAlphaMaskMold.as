@@ -89,8 +89,8 @@ public class AtlasTextureAlphaMaskMold
         // max(multiple of 32 length, multiple of 6 length)
         var originalDataLength :int = pixelVector.length;
         var minMaskDataLength :int = 32 * Math.ceil(originalDataLength / 32);
-        var minStringDataLength :int = 6 * Math.ceil(originalDataLength / 6);
-        var requiredDataLength :int = Math.max(minMaskDataLength, minStringDataLength);
+        var minStringDataLength :int = 6 * Math.ceil(minMaskDataLength / 6);
+        var requiredDataLength :int = minStringDataLength;
         var requiredPadding :int = requiredDataLength - pixelVector.length;
         for (var p :int = 0; p < requiredPadding; ++p) {
             pixelVector.push(0);
@@ -134,7 +134,7 @@ public class AtlasTextureAlphaMaskMold
         mold._width = width;
         mold._height = height;
         mold._bits = bits;
-        mold._bitsString = bitsString
+        mold._bitsString = bitsString;
         return mold;
     }
 
@@ -191,7 +191,7 @@ public class AtlasTextureAlphaMaskMold
         mold._width = width;
         mold._height = height;
         mold._bits = bits;
-        mold._bitsString = bitsString
+        mold._bitsString = bitsString;
         return mold;
     }
     
