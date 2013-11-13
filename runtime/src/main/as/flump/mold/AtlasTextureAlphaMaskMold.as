@@ -5,6 +5,7 @@ package flump.mold {
     
 import flash.display.BitmapData;
 import flash.geom.Matrix;
+import flash.geom.Rectangle;
 import flash.utils.Dictionary;
 import starling.textures.Texture;
 
@@ -25,7 +26,7 @@ public class AtlasTextureAlphaMaskMold
         return opaque;
     }
     
-    public static function fromBitmapData (bmd :BitmapData, alphaMaskQuality :Number) :AtlasTextureAlphaMaskMold {
+    public static function fromBitmapData (bmd :BitmapData, bmdRegion :Rectangle, alphaMaskQuality :Number) :AtlasTextureAlphaMaskMold {
         // calculate target representation dimensions
         var width :int;
         var height :int;
@@ -39,25 +40,28 @@ public class AtlasTextureAlphaMaskMold
         } else if (alphaMaskQuality <= 1) {
             // proportional representation (1 image pixel -> alphaMaskQuality mask bits)
             // (actually the same as alphaQuality = -1 / alphaQuality, above)
-            width = Math.ceil(bmd.width * alphaMaskQuality);
-            height = Math.ceil(bmd.height * alphaMaskQuality);
+            width = Math.ceil(bmdRegion.width * alphaMaskQuality);
+            height = Math.ceil(bmdRegion.height * alphaMaskQuality);
         } else { // (alphaMaskQuality > 1)
             // granular representation, (alphaMaskQuality image pixels -> 1 mask bit)
             // i.e. quality 2 will mask every 2x2 block of source pixels to 1 mask bit
-            width = Math.ceil(bmd.width / alphaMaskQuality);
-            height = Math.ceil(bmd.height / alphaMaskQuality);
+            width = Math.ceil(bmdRegion.width / alphaMaskQuality);
+            height = Math.ceil(bmdRegion.height / alphaMaskQuality);
         }
-            
+
         // cap dimensions at scale 1
-        width = Math.min(width, bmd.width);
-        height = Math.min(height, bmd.height);
+        width = Math.min(width, bmdRegion.width);
+        height = Math.min(height, bmdRegion.height);
+
+        // calculate scale and transform to shrink image
+        var scaleX :Number = width / bmdRegion.width;
+        var scaleY :Number = height / bmdRegion.height;
+        _s_hitTestScaleMatrix.setTo(scaleX, 0, 0, scaleY, -bmdRegion.x * scaleX, -bmdRegion.y * scaleY);
         
         // get pixel data from a scaled down image
-        var pixelVector :Vector.<uint>;
         var smallBmd :BitmapData = new BitmapData(width, height, true, 0x000000);
-        _s_hitTestScaleMatrix.setTo(width / bmd.width, 0, 0, height / bmd.height, 0, 0);
         smallBmd.draw(bmd, _s_hitTestScaleMatrix, null, null, null, true);
-        pixelVector = smallBmd.getVector(smallBmd.rect);
+        var pixelVector :Vector.<uint> = smallBmd.getVector(smallBmd.rect);
         smallBmd.dispose();
 
         // generate mask from pixel vector
@@ -95,7 +99,7 @@ public class AtlasTextureAlphaMaskMold
         for (var p :int = 0; p < requiredPadding; ++p) {
             pixelVector.push(0);
         }
-            
+
         // now loop over pixels and compact alpha values into bits 
         // every 32 -> bits Vector
         // every 6 -> base64 string
@@ -107,7 +111,7 @@ public class AtlasTextureAlphaMaskMold
         var maskBits :uint = 0;
         var pixel :uint;
         var alpha :uint;
-        
+
         for (var ii :int = 0; ii < requiredDataLength; ++ii) {
             pixel = pixelVector[ii];
             alpha = pixel >> 24 & 0xFF;
@@ -140,7 +144,7 @@ public class AtlasTextureAlphaMaskMold
 
     protected static function fromBitsString(width :int, height :int, bitsString :String) :AtlasTextureAlphaMaskMold {
         // now loop over base64 string and recompact bits into mask
-        
+
         // make sure we have our character lookup table
         buildBase64CharToIntTable();
 
@@ -165,21 +169,21 @@ public class AtlasTextureAlphaMaskMold
             maskBitCount += useBitCount;
             charBits = (charBits << (32 - (charBitCount - useBitCount))) >> (32 - (charBitCount - useBitCount));
             charBitCount -= useBitCount;
-            
+
             // maybe stash mask bits
             if (maskBitCount == 32) {
                 bits.push(maskBits);
                 maskBitCount = 0;
                 maskBits = 0;
             }
-            
+
             // maybe get next char
             if ((charBitCount == 0) && (bitsStringIndex < bitsStringLength)) {
                 charBitCount = 6;
                 charBits = base64CharToInt(bitsString.charAt(bitsStringIndex));
                 bitsStringIndex++;
             }
-            
+
         }  while (charBitCount > 0);
 
         // any remaining bits are overflow and can be discarded
@@ -206,7 +210,7 @@ public class AtlasTextureAlphaMaskMold
     static private function buildBase64CharToIntTable() :void {
         if (_s_base64Ints)
             return;
-            
+
         _s_base64Ints = new Dictionary();
         for (var ii :int = 0; ii < 64; ++ii) {
             var char :String = intToBase64Char(ii);

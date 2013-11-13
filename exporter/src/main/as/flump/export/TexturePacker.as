@@ -235,7 +235,7 @@ class AtlasImpl
             texMold.bounds = new Rectangle(node.bounds.x, node.bounds.y, tex.w, tex.h);
             texMold.origin = new Point(tex.origin.x, tex.origin.y);
             if (alphaMaskQuality != 0)
-                texMold.alphaMask = AtlasTextureAlphaMaskMold.fromBitmapData(node.bmd, alphaMaskQuality);
+                texMold.alphaMask = AtlasTextureAlphaMaskMold.fromBitmapData(_bitmapData, texMold.bounds, alphaMaskQuality);
             mold.textures.push(texMold);
         });
         return mold;
@@ -246,8 +246,7 @@ class AtlasImpl
             var constructed :Sprite = new Sprite();
             var collapsedBounds :Rectangle = new Rectangle();
             _nodes.forEach(function (node :Node, ..._) :void {
-                node.bmd = node.texture.toBitmapData(_borderSize);
-                const bm :Bitmap = new Bitmap(node.bmd, "auto", true);
+                const bm :Bitmap = new Bitmap(node.texture.toBitmapData(_borderSize), "auto", true);
                 constructed.addChild(bm);
                 bm.x = node.paddedBounds.x;
                 bm.y = node.paddedBounds.y;
@@ -325,7 +324,6 @@ class Node
     public var bounds :Rectangle;
     public var paddedBounds :Rectangle;
     public var texture :SwfTexture;
-    public var bmd :BitmapData;
 
     public function Node (x :int, y :int, borderSize :int, texture :SwfTexture) {
         this.texture = texture;
