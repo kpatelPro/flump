@@ -13,8 +13,8 @@ public class AtlasTextureAlphaMaskMold
 {
     public function isOpaqueParametric(paramX :Number, paramY :Number) :Boolean {
         // get coordinates in mask space
-        var x :int = (paramX * (_width - 1));
-        var y :int = (paramY * (_height - 1));
+        var x :int = Math.round(paramX * (_width - 1));
+        var y :int = Math.round(paramY * (_height - 1));
 
         // get the specific pixel's alpha data
         var bitIndex :uint = (y * _width) + x;
