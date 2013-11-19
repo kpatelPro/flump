@@ -71,7 +71,7 @@ public class Movie extends Sprite
     public function get numFrames () :int { return _numFrames; }
 
     /** @return true if the movie is currently playing. */
-    public function get isPlaying () :Boolean { return _playing; }
+    public function get isPlaying () :Boolean { return _state == PLAYING; }
 
     /** @return the color tint to the Movie. */
     public function get color () :uint { return _color; }
@@ -83,7 +83,7 @@ public class Movie extends Sprite
 
     /** Plays the movie from its current frame. The movie will loop forever.  */
     public function loop () :Movie {
-        _playing = true;
+        _state = PLAYING;
         _stopFrame = NO_FRAME;
         return this;
     }
@@ -126,7 +126,8 @@ public class Movie extends Sprite
        return stopAt(position).play();
     }
 
-    /** Sets the stop frame for this Movie.
+    /**
+     * Sets the stop frame for this Movie.
      *
      * @param position the int frame or String label to stop at.
      *
@@ -140,20 +141,27 @@ public class Movie extends Sprite
         return this;
     }
 
-    /** Sets the movie playing.  Movie will automatically stop at its stopFrame, if one is set, 
-     *  otherwise it will loop forever.
+    /**
+     * Sets the movie playing. It will automatically stop at its stopFrame, if one is set,
+     * otherwise it will loop forever.
      *
      * @return this movie for chaining
      */
     public function play () :Movie {
         // set playing to true unless movie is at the stop frame
-        _playing = (_frame != _stopFrame) || (_stopFrame == NO_FRAME);
+        _state = (_frame != _stopFrame ? PLAYING : STOPPED);
         return this;
     }
 
     /** Stops playback if it's currently active. Doesn't alter the current frame or stop frame. */
     public function stop () :Movie {
-        _playing = false;
+        _state = STOPPED;
+        return this;
+    }
+
+    /** Stops playback of this movie, but not its children */
+    public function playChildrenOnly () :Movie {
+        _state = PLAYING_CHILDREN_ONLY;
         return this;
     }
 
@@ -161,9 +169,9 @@ public class Movie extends Sprite
     public function advanceTime (dt :Number) :void {
         if (dt < 0) throw new Error("Invalid time [dt=" + dt + "]");
         if (_skipAdvanceTime) { _skipAdvanceTime = false; return; }
-        if (!_playing) return;
+        if (_state == STOPPED) return;
 
-        if (_numFrames > 1) {
+        if (_state == PLAYING && _numFrames > 1) {
             _playTime += dt;
             var actualPlaytime :Number = _playTime;
             if (_playTime >= _duration) _playTime %= _duration;
@@ -180,7 +188,7 @@ public class Movie extends Sprite
                     (_frame <= _stopFrame ? _stopFrame - _frame : _numFrames - _frame + _stopFrame);
                 var framesElapsed :int = int(actualPlaytime * _frameRate) - _frame;
                 if (framesElapsed >= framesRemaining) {
-                    _playing = false;
+                    _state = STOPPED;
                     newFrame = _stopFrame;
                 }
             }
@@ -195,8 +203,12 @@ public class Movie extends Sprite
         }
     }
 
-    /** notify this Movie that it has been added to the Layer after initialization */
-    public function addedToLayer() :void {
+    /**
+     * @private
+     *
+     * Called when the Movie has been newly added to a layer.
+     */
+    internal function addedToLayer () :void {
         goTo(0);
         _skipAdvanceTime = true;
     }
@@ -325,7 +337,7 @@ public class Movie extends Sprite
     /** @private */
     protected var _frame :int = NO_FRAME, _stopFrame :int = NO_FRAME;
     /** @private */
-    protected var _playing :Boolean = true;
+    protected var _state :int = PLAYING;
     /** @private */
     protected var _playTime :Number, _duration :Number;
     /** @private */
@@ -344,6 +356,10 @@ public class Movie extends Sprite
     private var _color:uint = 0xffffff;
 
     private static const NO_FRAME :int = -1;
+
+    private static const STOPPED :int = 0;
+    private static const PLAYING_CHILDREN_ONLY :int = 1;
+    private static const PLAYING :int = 2;
 }
 }
 
