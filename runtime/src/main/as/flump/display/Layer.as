@@ -164,7 +164,7 @@ internal class Layer
                 colorDisplay(display, color);
             }
         } else {
-            colorDisplay(_movie.getChildAt(_layerIdx), color);
+            colorDisplay(_currentDisplay, color);
         }
     }
 
