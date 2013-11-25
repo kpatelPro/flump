@@ -20,6 +20,7 @@ import flash.geom.Rectangle;
 import flump.executor.load.LoadedSwf;
 import flump.mold.MovieMold;
 import flump.xfl.XflLibrary;
+import flump.xfl.XflMovie;
 import flump.xfl.XflTexture;
 
 public class SwfTexture
