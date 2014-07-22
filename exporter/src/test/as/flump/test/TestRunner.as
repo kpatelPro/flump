@@ -24,8 +24,8 @@ public class TestRunner extends Sprite
 
     public function TestRunner () {
         Log.setLevel("", Log.INFO);
-        _exec.completed.add(onCompletion);
-        _exec.terminated.add(function (..._) :void {
+        _exec.completed.connect(onCompletion);
+        _exec.terminated.connect(function (..._) :void {
             if (_passed.length > 0) {
                 trace("Passed:");
                 for each (var name :String in _passed) trace("  " + name);

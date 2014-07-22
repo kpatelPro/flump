@@ -82,6 +82,7 @@ public class ExportConf
     public function createPublishFormat (exportDir :File, lib :XflLibrary) :PublishFormat {
         var formatClass :Class;
         switch (format.toLowerCase()) {
+            case AMFZipFormat.NAME.toLowerCase(): formatClass = AMFZipFormat; break;
             case JSONFormat.NAME.toLowerCase(): formatClass = JSONFormat; break;
             case JSONZipFormat.NAME.toLowerCase(): formatClass = JSONZipFormat; break;
             case XMLFormat.NAME.toLowerCase(): formatClass = XMLFormat; break;

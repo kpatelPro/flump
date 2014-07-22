@@ -198,6 +198,8 @@ public class LibraryLoader
     /** @private */
     public static const LIBRARY_LOCATION :String = "library.json";
     /** @private */
+    public static const LIBRARY_LOCATION_AMF :String = "library.amf";
+    /** @private */
     public static const MD5_LOCATION :String = "md5";
     /** @private */
     public static const VERSION_LOCATION :String = "version";
