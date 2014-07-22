@@ -35,12 +35,12 @@ public class RuntimePlaybackTest
         assert(_movie.frame == 0, "Frame starts at 0");
         assert(_movie.isPlaying, "Movie starts out playing");
         _runner.addChild(_movie);
-        _movie.labelPassed.add(_labelsPassed.push);
+        _movie.labelPassed.connect(_labelsPassed.push);
     }
 
     public function goToFrameAndLabel () :void {
         _movie = _res.createMovie("nesteddance");
-        _movie.labelPassed.add(_labelsPassed.push);
+        _movie.labelPassed.connect(_labelsPassed.push);
         _movie.goTo("timepassed");
         assert(_movie.frame == 9);
         passed("timepassed");

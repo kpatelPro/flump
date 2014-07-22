@@ -21,10 +21,10 @@ public class StarlingResourcesTest
     public function StarlingResourcesTest (runner :TestRunner, zipFile :File) {
         runner.runAsync("Load Starling Resources", function (finisher :FutureTask) :void {
             const loader :Future = LibraryLoader.loadURL(zipFile.url);
-            loader.succeeded.add(function (res :Library) :void {
+            loader.succeeded.connect(function (res :Library) :void {
                 finisher.succeedAfter(F.callback(checkResources, res));
             });
-            loader.failed.add(finisher.fail);
+            loader.failed.connect(finisher.fail);
         });
         function checkResources (res :Library) :void {
             assert(res.movieSymbols.length == 2, "There should be 2 items in movieNames");
@@ -48,8 +48,8 @@ public class StarlingResourcesTest
         runner.runAsync("Fail loading resources with " + reason,
             function (future :FutureTask) :void {
                 const loader :Future = LibraryLoader.loadBytes(new badResources());
-                loader.succeeded.add(F.callback(future.fail, "Shouldn't load resources with " + reason));
-                loader.failed.add(future.succeed);
+                loader.succeeded.connect(F.callback(future.fail, "Shouldn't load resources with " + reason));
+                loader.failed.connect(future.succeed);
         });
     }
 

@@ -22,6 +22,7 @@ import flump.executor.Future;
 import flump.executor.FutureTask;
 import flump.executor.load.ImageLoader;
 import flump.executor.load.LoadedImage;
+import flump.mold.AMF;
 import flump.mold.AtlasMold;
 import flump.mold.AtlasTextureMold;
 import flump.mold.LibraryMold;
@@ -33,6 +34,7 @@ import starling.textures.Texture;
 
 internal class Loader {
     public function Loader (toLoad :Object, libLoader :LibraryLoader) {
+        AMF.registerClassAliases();
         _scaleFactor = (libLoader.scaleFactor > 0 ? libLoader.scaleFactor :
             Starling.contentScaleFactor);
         _libLoader = libLoader;
@@ -62,6 +64,9 @@ internal class Loader {
         if (name == LibraryLoader.LIBRARY_LOCATION) {
             const jsonString :String = loaded.content.readUTFBytes(loaded.content.length);
             _lib = LibraryMold.fromJSON(JSON.parse(jsonString));
+            _libLoader.libraryMoldLoaded.emit(_lib);
+        } else if (name == LibraryLoader.LIBRARY_LOCATION_AMF) {
+            _lib = loaded.content.readObject();
             _libLoader.libraryMoldLoaded.emit(_lib);
         } else if (name.indexOf(PNG, name.length - PNG.length) != -1) {
             _atlasBytes[name] = loaded.content;

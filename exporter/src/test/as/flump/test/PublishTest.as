@@ -9,6 +9,7 @@ import flump.export.ExportConf;
 import flump.export.JSONFormat;
 import flump.export.ProjectConf;
 import flump.export.Publisher;
+import flump.export.AMFZipFormat;
 import flump.export.JSONZipFormat;
 import flump.export.XMLFormat;
 import flump.xfl.XflLibrary;
@@ -20,6 +21,8 @@ public class PublishTest
         runner.run("Publish XML", makePublishTest("xml", XMLFormat));
         runner.run("Publish JSON", makePublishTest("json", JSONFormat));
         runner.run("Publish JSONZip", makePublishTest("jsonzip", JSONZipFormat,
+            function (output :File) :void {  new StarlingResourcesTest(runner, output); }));
+        runner.run("Publish AMFZip", makePublishTest("amfzip", AMFZipFormat,
             function (output :File) :void {  new StarlingResourcesTest(runner, output); }));
     }
 
